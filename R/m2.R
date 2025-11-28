@@ -5,7 +5,6 @@
 #'
 #' @returns A Boolean indicating wheter the data set is consitent or not
 #' @export
-#'
 M2 <- function(dataset, y = vector_with_names_of_items){
   is_consistent <- TRUE
 
