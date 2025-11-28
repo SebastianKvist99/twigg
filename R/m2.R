@@ -19,7 +19,7 @@ M2 <- function(dataset, y = vector_with_names_of_items){
     values_to = "item_score"
   )
 
-  data_long <- data_long %>% mutate(rest_score = total_score - item_score)
+  data_long <- data_long tidyr::%>% mutate(rest_score = total_score - item_score)
 
   correlations <- data_long %>%
     group_by(item_name) %>%
