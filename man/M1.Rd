@@ -2,7 +2,7 @@
 % Please edit documentation in R/m1.R
 \name{M1}
 \alias{M1}
-\title{M1 test for consitence}
+\title{M1 test for consistence}
 \usage{
 M1(dataset, y = vector_with_names_of_items)
 }
@@ -16,7 +16,7 @@ A Boolean indicating whether the dataset is consistent wrt the M1
 criteria
 }
 \description{
-M1 test for consitence
+M1 test for consistence
 }
 \examples{
 df <- data

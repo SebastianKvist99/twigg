@@ -1,3 +1,12 @@
+#' M2 function to test for consistency
+#'
+#' @param dataset A data set with item scores and covariates
+#' @param y A character vector
+#'
+#' @returns A Boolean indicating wheter the data set is consitent or not
+#' @export
+#'
+#' @examples
 M2 <- function(dataset, y = vector_with_names_of_items){
   is_consistent <- TRUE
 

@@ -1,4 +1,4 @@
-#' M1 test for consitence
+#' M1 test for consistence
 #'
 #' @param dataset A data set with item scores and covariates
 #' @param y A character vector
