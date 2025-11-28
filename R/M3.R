@@ -1,5 +1,15 @@
+#' Title
+#'
+#' @param dataset
+#' @param y
+#' @param X
+#' @param corr_method
+#' @param include_pvalues
+#'
+#' @returns
 #' @export
 #'
+#' @examples
 M3 <- function(dataset, y = vector_with_names_of_items, X = vector_with_names_of_covariates,
                corr_method = "pearson", include_pvalues = TRUE){
 
