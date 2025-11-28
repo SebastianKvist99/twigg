@@ -3,8 +3,7 @@ Title: Tool for screening item response data
 Version: 0.0.0.9000
 Authors@R: 
     person("Sebastian", "Kvist", , "first.last@example.com", role = c("aut", "cre"))
-Description: functions to help screen IRT data and determine if a Rasch model is applicable. 
-The implementaion is based on the screening process proposed by Karl Bang Christensen and Svend Kreiner. 
+Description: functions to help screen IRT data and determine if a Rasch model is applicable. The implementaion is based on the screening process proposed by Karl Bang Christensen and Svend Kreiner. 
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
