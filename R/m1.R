@@ -14,6 +14,6 @@
 #'
 M1 <- function(dataset, y = vector_with_names_of_items){
   corr_matrix <- stats::cor(dataset[y])
-  fulfilled <- stats::sum(corr_matrix<=0)==0
+  fulfilled <- sum(corr_matrix<=0)==0
   return(fulfilled)
 }
