@@ -6,7 +6,6 @@
 #' @returns A Boolean indicating wheter the data set is consitent or not
 #' @export
 #'
-#' @examples
 M2 <- function(dataset, y = vector_with_names_of_items){
   is_consistent <- TRUE
 
@@ -19,7 +18,7 @@ M2 <- function(dataset, y = vector_with_names_of_items){
     values_to = "item_score"
   )
 
-  data_long <- data_long tidyr::%>% mutate(rest_score = total_score - item_score)
+  data_long <- data_long %>% mutate(rest_score = total_score - item_score)
 
   correlations <- data_long %>%
     group_by(item_name) %>%

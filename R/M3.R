@@ -1,15 +1,14 @@
 #' Title
 #'
-#' @param dataset
-#' @param y
-#' @param X
-#' @param corr_method
-#' @param include_pvalues
+#' @param dataset An item reposne data set
+#' @param y charecter vector
+#' @param X charector vector
+#' @param corr_method method used for computation of corrolaion
+#' @param include_pvalues Boolean to indicate if p-values should be included in the output or not
 #'
-#' @returns
+#' @returns a data frame
 #' @export
 #'
-#' @examples
 M3 <- function(dataset, y = vector_with_names_of_items, X = vector_with_names_of_covariates,
                corr_method = "pearson", include_pvalues = TRUE){
 

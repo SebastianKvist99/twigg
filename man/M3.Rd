@@ -13,7 +13,18 @@ M3(
 )
 }
 \arguments{
-\item{include_pvalues}{}
+\item{dataset}{An item reposne data set}
+
+\item{y}{charecter vector}
+
+\item{X}{charector vector}
+
+\item{corr_method}{method used for computation of corrolaion}
+
+\item{include_pvalues}{Boolean to indicate if p-values should be included in the output or not}
+}
+\value{
+a data frame
 }
 \description{
 Title
