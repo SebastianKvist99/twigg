@@ -22,4 +22,5 @@ M1 test for consitence
 df <- data
 y <- c("item1", "item2", "item3")
 M1(df, y)
+
 }
