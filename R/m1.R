@@ -12,7 +12,7 @@
 #' y <- c("item1", "item2", "item3")
 #' M1(df, y)
 #'
-M1 <- function(dataset, y = vector_with_names_of_items){
+M1 <- function(dataset, y){
   corr_matrix <- stats::cor(dataset[y])
   fulfilled <- sum(corr_matrix<=0)==0
   return(fulfilled)
