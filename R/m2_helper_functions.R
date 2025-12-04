@@ -15,3 +15,27 @@ compute_and_include_total_score <- function(data, y){
   return(data_w_score)
 }
 
+
+#' Title
+#'
+#' @param data
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+pivot_data_longer <- function(data){
+  tidyr::pivot_longer()
+}
+
+
+
+
+
+
+
+
+
+
+
+

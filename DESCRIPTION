@@ -17,3 +17,6 @@ Imports:
     dplyr,
     stats,
     tidyr
+Depends: 
+    R (>= 3.5)
+LazyData: true

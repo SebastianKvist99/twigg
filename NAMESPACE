@@ -2,3 +2,4 @@
 
 export(M1)
 export(M2)
+export(pivot_data_longer)
