@@ -18,7 +18,8 @@ data frame of item response with one additional column containing the total scor
 Compute and insert total item score
 }
 \examples{
-df <- data.frame("id" = c(1,2,3,4), "item1" = c(1,1,1,1), "item2" = c(2,2,2,2))
-y <- c("item1", "item2")
-compute_and_include_total_score(df, y)
+df <- toy_spadi_pain
+items <- paste0("item", 1:5)
+
+## note to self: should we include a way to handle NA's?
 }

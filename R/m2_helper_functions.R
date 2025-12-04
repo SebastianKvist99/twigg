@@ -6,9 +6,10 @@
 #' @returns data frame of item response with one additional column containing the total score
 #'
 #' @examples
-#' df <- data.frame("id" = c(1,2,3,4), "item1" = c(1,1,1,1), "item2" = c(2,2,2,2))
-#' y <- c("item1", "item2")
-#' compute_and_include_total_score(df, y)
+#' df <- toy_spadi_pain
+#' items <- paste0("item", 1:5)
+#'
+#' ## note to self: should we include a way to handle NA's?
 compute_and_include_total_score <- function(data, y){
   item_data <- data[y]
   data_w_score <- dplyr::mutate(item_data, total_score = rowSums(item_data))
@@ -16,17 +17,6 @@ compute_and_include_total_score <- function(data, y){
 }
 
 
-#' Title
-#'
-#' @param data
-#'
-#' @returns
-#' @export
-#'
-#' @examples
-pivot_data_longer <- function(data){
-  tidyr::pivot_longer()
-}
 
 
 

@@ -4,15 +4,15 @@
 \alias{M2}
 \title{M2 function to test for consistency}
 \usage{
-M2(dataset, y = vector_with_names_of_items)
+M2(dataset, items)
 }
 \arguments{
 \item{dataset}{A data set with item scores and covariates}
 
-\item{y}{A character vector}
+\item{items}{A character vector}
 }
 \value{
-A Boolean indicating wheter the data set is consitent or not
+A Boolean indicating whether the data set is consistent or not
 }
 \description{
 M2 function to test for consistency

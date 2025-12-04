@@ -8,9 +8,9 @@
 #' @export
 #'
 #' @examples
-#' df <- data
-#' y <- c("item1", "item2", "item3")
-#' M1(df, y)
+#' df <- toy_spadi_pain
+#' items <- paste0("pain", 1:5)
+#' M1(df, items)
 #'
 M1 <- function(dataset, y){
   corr_matrix <- stats::cor(dataset[y])

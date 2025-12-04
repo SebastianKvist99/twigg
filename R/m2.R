@@ -1,31 +1,29 @@
 #' M2 function to test for consistency
 #'
 #' @param dataset A data set with item scores and covariates
-#' @param y A character vector
+#' @param items A character vector
 #'
-#' @returns A Boolean indicating wheter the data set is consitent or not
+#' @returns A Boolean indicating whether the data set is consistent or not
 #' @export
-M2 <- function(dataset, y = vector_with_names_of_items){
-  is_consistent <- TRUE
+M2 <- function(dataset, items) {
 
-  data <- dataset[y]
-  data <- data %>% mutate(total_score = rowSums(data))
+  # extract item matrix
+  X <- as.matrix(dataset[, items, drop = FALSE])
 
-  data_long <- data %>% pivot_longer(
-    cols = !total_score,
-    names_to = "item_name",
-    values_to = "item_score"
-  )
+  # compute total score
+  total_score <- rowSums(X)
 
-  data_long <- data_long %>% mutate(rest_score = total_score - item_score)
+  # expand total score into matrix for sweep
+  total_mat <- matrix(total_score, nrow = nrow(X), ncol = ncol(X))
 
-  correlations <- data_long %>%
-    group_by(item_name) %>%
-    summarise(
-      correlation = cor(item_score, rest_score, method = "pearson"),
-      .groups = "drop"
-    )
+  # rest score matrix
+  rest <- total_mat - X
 
-  is_consistent <- is_consistent == (sum(correlations$correlation <= 0) == 0)
-  return(is_consistent)
+  # item–rest correlations
+  ## Note to self: are we doing this correctly??
+  cors <- diag(stats::cor(X, rest))
+
+  # M2 condition: all positive
+  fulfilled <- all(cors > 0)
+  return(fulfilled)
 }

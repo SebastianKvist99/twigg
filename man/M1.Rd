@@ -19,8 +19,8 @@ criteria
 M1 test for consistence
 }
 \examples{
-df <- data
-y <- c("item1", "item2", "item3")
-M1(df, y)
+df <- toy_spadi_pain
+items <- paste0("pain", 1:5)
+M1(df, items)
 
 }
