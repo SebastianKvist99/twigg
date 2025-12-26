@@ -8,7 +8,7 @@
 complete_cases <- function(dataset){
   data <- stats::na.omit(dataset)
   if (nrow(data)<10){
-    stop("Too few observations in data set ot perform meaningfull screening")
+    stop("Too few observations in data set ot perform meaningful screening")
   }
   # return(data)
   invisible(NULL)
