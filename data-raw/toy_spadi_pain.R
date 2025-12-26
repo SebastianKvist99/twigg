@@ -9,7 +9,7 @@ n <- 250  # sample size
 # ---------------------------------------------------------
 sex <- sample(c("M", "F"), n, replace = TRUE, prob = c(0.45, 0.55))
 age <- round(rnorm(n, mean = 55, sd = 12))
-age[age < 18] <- 18
+age[age < 18] <- 18 #+ abs(round(rnorm(1, mean = 0, sd = 1)))
 age[age > 85] <- 85
 
 # ---------------------------------------------------------
