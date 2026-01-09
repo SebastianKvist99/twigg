@@ -3,7 +3,7 @@
 #' @param dataset an item repsosne data set
 #'
 #' @returns nothing or stops whatever the functions is called inside of if the if statement is fulfilled.
-#'
+#' @keywords internal
 #'
 complete_cases <- function(dataset){
   data <- stats::na.omit(dataset)

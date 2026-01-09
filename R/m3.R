@@ -1,28 +1,33 @@
+#' Title
+#'
+#' @param dataset
+#' @param items
+#' @param covariates
+#' @param corr_method
+#' @param include_pvalues
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+M3 <- function(dataset, items, covariates,
+               corr_method = "pearson",
+               include_pvalues = TRUE) {
 
+  dataset <- complete_cases(dataset)
 
-
-
-M3 <- function(dataset, y, X, corr_method = "pearson", include_pvalues = TRUE){
-  complete_cases(dataset)
-
-  ## Create empty df for results
-  M3_output <- data.frame(
-    covariate = character(),
-    target_type = character(),
-    target_name = character(),   # Added this to distinguish items/scores
-    correlation = numeric(),
-    p_value = numeric(),         # Added p-values
-    correlation_method = character(),
-    stringsAsFactors = FALSE
+  results <- lapply(
+    covariates,
+    M3_one_covariate,
+    dataset = dataset,
+    items = items,
+    method = corr_method,
+    include_pvalues = include_pvalues
   )
 
-  # store item_scores, covariates and total scores in 3 separate variables.
-  items_responses <- dataset[y]
-  covariates <- dataset[X]
-  scores <- rowSums(items_responses)
+  out <- do.call(rbind, results)
+  out$correlation <- round(out$correlation, 3)
 
-  cat("Testing M3 for", length(X), "covariates against", length(y), "items + total score\n")
-
-
-
+  out
 }
+
