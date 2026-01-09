@@ -20,7 +20,8 @@ M2 <- function(dataset, items) {
   rest <- total_mat - X
 
   # item–rest correlations
-  ## Note to self: are we doing this correctly??
+  ## Q to self: are we doing this correctly??
+  ## A to self: I do think so yes.
   cors <- diag(stats::cor(X, rest))
 
   # M2 condition: all positive

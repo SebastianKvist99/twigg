@@ -16,3 +16,7 @@ complete_cases <- function(dataset){
   }
   data
 }
+
+
+
+
