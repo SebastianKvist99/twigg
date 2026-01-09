@@ -15,3 +15,4 @@ nothing or stops whatever the functions is called inside of if the if statement 
 \description{
 Complete case function
 }
+\keyword{internal}

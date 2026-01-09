@@ -43,7 +43,7 @@ check_covariate <- function(x, name) {
 #'
 #' @param items_df the sub df only containing the items
 #'
-#' @returns # the row sums of the items data frame
+#' @returns the row sums of the items data frame
 #' @keywords internal
 #'
 #' @examples
@@ -115,6 +115,15 @@ cor_one_pair <- function(x, y, method = "pearson", include_pvalues = TRUE) {
 #' @keywords internal
 #'
 #' @examples
+#' items <- paste0("pain", 1:5)
+#'
+#' M3_one_covariate(
+#'   covariate_name = "age",
+#'   dataset = toy_spadi_pain,
+#'   items = items,
+#'   method = "pearson",
+#'   include_pvalues = TRUE
+#' )
 M3_one_covariate <- function(covariate_name, dataset, items, method, include_pvalues) {
 
   X_i <- check_covariate(dataset[[covariate_name]], covariate_name)

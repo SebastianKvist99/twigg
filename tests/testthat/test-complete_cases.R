@@ -10,7 +10,7 @@ test_that("Early stopping occurs when too few complete cases", {
   )
   expect_error(
     complete_cases(df),
-    "Too few observations in data set ot perform meaningful screening"
+    "Too few observations in data set to perform meaningful screening"
   )
 })
 
@@ -52,13 +52,18 @@ test_that("Test edge case with exactly 10 observations", {
   )
 })
 
-test_that("Function returns invisible NULL when the succesfull", {
+test_that("complete_cases returns data frame when successful", {
+
   df <- data.frame(
-    x = c(1:15),
-    y = c(1:15)
+    x = 1:15,
+    y = 1:15
   )
-  expect_equal(complete_cases(df),
-               invisible(NULL))
+
+  out <- complete_cases(df)
+
+  expect_s3_class(out, "data.frame")
+  expect_equal(nrow(out), 15)
+  expect_false(anyNA(out))
 })
 
 
