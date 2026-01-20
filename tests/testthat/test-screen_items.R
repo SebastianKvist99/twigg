@@ -13,7 +13,7 @@ test_that("screen_items passes all steps on toy SPADI data", {
   expect_true(res$passed)
   expect_null(res$failed_step)
 
-  expect_true("M1" %in% names(res))# || !"M1" %in% names(res))
+  expect_true("M1" %in% names(res))
   expect_true("M2" %in% names(res))
   expect_true("M3" %in% names(res))
 })
