@@ -13,6 +13,10 @@
 #' M1(df, items)
 #'
 M1 <- function(dataset, items){
+
+  are_items_in_df(dataset, items)
+  are_items_numeric(dataset, items)
+
   corr_matrix <- stats::cor(dataset[items])
   fulfilled <- sum(corr_matrix<=0)==0
 

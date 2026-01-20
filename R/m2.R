@@ -6,6 +6,9 @@
 #' @returns A Boolean indicating whether the data set is consistent or not
 #' @export
 M2 <- function(dataset, items) {
+  # input validation checks
+  are_items_in_df(dataset, items)
+  are_items_numeric(dataset, items)
 
   # extract item matrix
   X <- as.matrix(dataset[, items, drop = FALSE])

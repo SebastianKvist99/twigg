@@ -95,3 +95,45 @@ test_that("Partially missing rows are not counted as complete", {
     complete_cases(df)
   )
 })
+
+##############################################################################
+##############################################################################
+################ Simple input validation function checks tests ###############
+test_that("Are items in df function works well", {
+  df <- toy_spadi_pain
+  wrong_items <- paste0("pain", 1:6)
+  right_items <- paste0("pain", 1:5)
+
+  expect_error(are_items_in_df(df, wrong_items),
+               "One or more of the given item names are not in the data frame")
+  expect_silent(are_items_in_df(df, right_items))
+})
+
+test_that("Are covariates in df function works well", {
+  df <- toy_spadi_pain
+  wrong_covs <- c("height", "weight")
+  right_covs <- c("age", "sex")
+
+  expect_error(are_covaraites_in_df(df, wrong_covs),
+               "One or more of the given covariate names are not in the data frame")
+  expect_silent(are_covaraites_in_df(df, right_covs))
+})
+
+test_that("Are items numerical function works well", {
+  bad_df <- data.frame("item1" = 1:10,
+                   "item2" = letters[1:10],
+                   "item3" = factor(sample(c("m", "f"), 10, replace = TRUE)))
+  good_df <- data.frame("item1" = 1:10,
+                        "item2" = 10:19,
+                        "item3" = 5:14)
+  items <- paste0("item", 1:3)
+
+  expect_error(are_items_numeric(bad_df, items),
+               "One or more items are not numerical")
+  expect_silent(are_items_numeric(good_df, items))
+})
+
+
+
+
+

@@ -50,7 +50,8 @@ test_that("M1 test on data with perfect correlation, i.e. corr =1 (edge case)", 
 test_that("M1 errors when items argument contains invalid column names", {
 
   expect_error(
-    M1(toy_spadi_pain, c("pain1", "pain999"))
+    M1(toy_spadi_pain, c("pain1", "pain999")),
+    "One or more of the given item names are not in the data frame"
   )
 })
 
@@ -62,9 +63,10 @@ test_that("M1 errors with non-numeric items", {
   )
 
   expect_error(
-    M1(df, c("x1", "x2"))
+    M1(df, c("x1", "x2")), "One or more items are not numerical"
   )
 })
+
 
 
 
