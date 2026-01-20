@@ -62,6 +62,10 @@ M3 <- function(dataset, items, covariates,
   out <- do.call(rbind, results)
   out$correlation <- round(out$correlation, 3)
 
-  out
+  fulfilled <- all(tapply(sign(out$correlation),
+                          out$covariate,
+                          function(x) length(unique(x[x != 0])) <= 1))
+
+  return(list(correlations = out, status = fulfilled))
 }
 

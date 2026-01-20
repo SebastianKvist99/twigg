@@ -166,17 +166,17 @@ M3_one_covariate <- function(covariate_name, dataset, items, method, include_pva
 
 
 
-#' Simple pass/fail flag for M3 function.
-#'
-#' @param M3_output
-#'
-#' @returns Boolean indicting whether M3 passed or failed
-#'
-#'
-M3_pass <- function(M3_output) {
-  score_row <- M3_output$target_type == "score"
-  all(M3_output$correlation[score_row] > 0)
-}
+#' #' Simple pass/fail flag for M3 function.
+#' #'
+#' #' @param M3_output
+#' #'
+#' #' @returns Boolean indicting whether M3 passed or failed
+#' #'
+#' #'
+#' M3_pass <- function(M3_output) {
+#'   score_row <- M3_output$target_type == "score"
+#'   all(M3_output$correlation[score_row] > 0)
+#' }
 
 
 

@@ -5,11 +5,11 @@ test_that("character covariates are accepted and coerced", {
   out <- M3(
     dataset = toy_spadi_pain,
     items = items,
-    covariates = "sex",
+    covariates = c("sex","age"),
     include_pvalues = FALSE
   )
 
-  expect_true(is.numeric(out$correlation))
+  expect_true(is.data.frame(out$correlations))
 })
 
 
@@ -27,14 +27,14 @@ test_that("M3 runs end-to-end and returns expected output", {
     include_pvalues = TRUE
   )
 
-  expect_s3_class(out, "data.frame")
+  expect_s3_class(out$correlations, "data.frame")
   expect_equal(
-    nrow(out),
+    nrow(out$correlations),
     length(covariates) * (length(items) + 1)
   )
 
   expect_true(all(c("covariate", "target_type", "target_name",
                     "correlation", "p_value", "method") %in%
-                    names(out)))
+                    names(out$correlations)))
 })
 

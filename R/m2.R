@@ -26,5 +26,7 @@ M2 <- function(dataset, items) {
 
   # M2 condition: all positive
   fulfilled <- all(cors > 0)
-  return(fulfilled)
+  #print(cors)
+  return(list(correlations = cors,
+              status = fulfilled))
 }

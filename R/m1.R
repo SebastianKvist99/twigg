@@ -15,5 +15,7 @@
 M1 <- function(dataset, items){
   corr_matrix <- stats::cor(dataset[items])
   fulfilled <- sum(corr_matrix<=0)==0
-  return(fulfilled)
+
+  return(list(correlations = corr_matrix,
+              status = fulfilled))
 }

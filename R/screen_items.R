@@ -81,7 +81,8 @@ screen_items <- function(dataset,
     M1_res <- M1(dataset, items)
     results$M1 <- M1_res
 
-    if (is.logical(M1_res) && !M1_res) {
+    #if (is.logical(M1_res) && !M1_res$status) {
+    if (!M1_res$status) {
       passed <- FALSE
       failed_step <- "M1"
       return(structure(
@@ -98,7 +99,8 @@ screen_items <- function(dataset,
     M2_res <- M2(dataset, items)
     results$M2 <- M2_res
 
-    if (is.logical(M2_res) && !M2_res) {
+    #if (is.logical(M2_res) && !M2_res) {
+    if (!M2_res$status) {
       passed <- FALSE
       failed_step <- "M2"
       return(structure(
@@ -122,7 +124,7 @@ screen_items <- function(dataset,
 
     results$M3 <- M3_res
 
-    if (!M3_pass(M3_res)) {
+    if (!M3_res$status) {
       passed <- FALSE
       failed_step <- "M3"
       return(structure(
@@ -144,3 +146,5 @@ screen_items <- function(dataset,
     class = "item_screening"
   )
 }
+
+
