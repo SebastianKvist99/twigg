@@ -48,8 +48,16 @@ test_that("M2 returns expected structure", {
   res <- M2(df, items)
 
 
-  expect_named(res, c("correlations", "status"))
+  expect_named(res, c("associations_measure", "associations", "status"))
   expect_type(res$status, "logical")
+})
+
+test_that("M2 should stop if invalid method is passed", {
+  df <- toy_spadi_pain
+  items <- paste0("pain", 1:5)
+
+  expect_error(M2(df, items, method = "invalid"),
+               "please input a valid method of associations measure")
 })
 
 

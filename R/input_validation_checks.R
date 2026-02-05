@@ -1,14 +1,15 @@
 #' Complete case function
 #'
 #' @param dataset an item repsosne data set
+#' @param n minimum number of observations
 #'
 #' @returns nothing or stops whatever the functions is called inside of if the if statement is fulfilled.
 #' @keywords internal
 #'
 
-complete_cases <- function(dataset){
+complete_cases <- function(dataset, n){
   data <- stats::na.omit(dataset)
-  if (nrow(data) < 10){
+  if (nrow(data) < n){
     stop(
       "Too few observations in data set to perform meaningful screening",
       call. = TRUE

@@ -14,7 +14,7 @@ age[age > 85] <- 85
 
 # ---------------------------------------------------------
 # Latent pain severity (theta)
-# SPADI pain scores are typically higher in older adults
+# assume SPADI pain scores are higher in older adults
 # and somewhat higher in females.
 # ---------------------------------------------------------
 theta <- rnorm(n,

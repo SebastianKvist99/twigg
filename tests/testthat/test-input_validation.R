@@ -9,7 +9,7 @@ test_that("Early stopping occurs when too few complete cases", {
     "item4" <- c(rep(sample(1:10, size = 15, replace = TRUE)))
   )
   expect_error(
-    complete_cases(df),
+    complete_cases(df, 10),
     "Too few observations in data set to perform meaningful screening"
   )
 })
@@ -25,7 +25,7 @@ test_that("No early stopping occurs when sufficient amount of few complete cases
     "item4" <- c(rep(sample(1:10, size = 15, replace = TRUE)))
   )
   expect_silent(
-    complete_cases(df)
+    complete_cases(df, 10)
   )
 })
 
@@ -36,7 +36,7 @@ test_that("Error message is informative and stable", {
     y = c(1:9)
   )
   expect_error(
-    complete_cases(df),
+    complete_cases(df, 10),
     regexp = "Too few observations"
   )
 })
@@ -48,7 +48,7 @@ test_that("Test edge case with exactly 10 observations", {
     y = c(1:10)
   )
   expect_silent(
-    complete_cases(df)
+    complete_cases(df, 10)
   )
 })
 
@@ -59,7 +59,7 @@ test_that("complete_cases returns data frame when successful", {
     y = 1:15
   )
 
-  out <- complete_cases(df)
+  out <- complete_cases(df, 10)
 
   expect_s3_class(out, "data.frame")
   expect_equal(nrow(out), 15)
@@ -73,14 +73,14 @@ test_that("Test behaviour with all missing data", {
     y = rep(NA,15)
   )
   expect_error(
-    complete_cases(df),
+    complete_cases(df, 10),
     regexp = "Too few observations"
   )
 })
 
 test_that("Non-data-frame input errors", {
   expect_error(
-    complete_cases(1:20)
+    complete_cases(1:20, 10)
   )
 })
 
@@ -92,7 +92,7 @@ test_that("Partially missing rows are not counted as complete", {
     y = c(1:9, NA)
   )
   expect_error(
-    complete_cases(df)
+    complete_cases(df, 10)
   )
 })
 

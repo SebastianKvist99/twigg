@@ -48,7 +48,7 @@ M3 <- function(dataset, items, covariates,
                corr_method = "pearson",
                include_pvalues = TRUE) {
 
-  dataset <- complete_cases(dataset)
+  dataset <- complete_cases(dataset, 10)
 
   results <- lapply(
     covariates,

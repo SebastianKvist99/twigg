@@ -67,7 +67,7 @@ screen_items <- function(dataset,
   # ---------------------------------------------------------
   # Ensure complete cases once
   # ---------------------------------------------------------
-  dataset <- complete_cases(dataset)
+  dataset <- complete_cases(dataset, 10)
 
   # ---------------------------------------------------------
   # Run screening steps
