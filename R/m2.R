@@ -2,9 +2,19 @@
 #'
 #' @param dataset A data set with item scores and covariates
 #' @param items A character vector
+#' @param method A string determining which associations method to use
 #'
-#' @returns A Boolean indicating whether the data set is consistent or not
+#' @returns A list with the chosen associations measure, the explicit
+#' associations scores and a status indicating whether or not we passed the
+#' M2 criteria.
+#'
 #' @export
+#'
+#' @examples
+#' data <- toy_spadi_pain
+#' items <- paste0("pain", 1:5)
+#' M2(data, items, method = "gamma")
+#'
 M2 <- function(dataset, items, method = "gamma") {
   # input validation checks
   are_items_in_df(dataset, items)

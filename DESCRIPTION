@@ -2,8 +2,11 @@ Package: twigg
 Title: Tool for screening item response data 
 Version: 0.0.0.9000
 Authors@R: 
-    person("Sebastian", "Kvist", , "first.last@example.com", role = c("aut", "cre"))
-Description: functions to help screen IRT data and determine if a Rasch model is applicable. The implementaion is based on the screening process proposed by Karl Bang Christensen and Svend Kreiner. 
+    person("Sebastian", "Kvist", , "zkb139alumni.ku.dk", role = c("aut", "cre"))
+Description: functions to help screen IRT data and determine if a Rasch model 
+    is applicable. The implementaion is based on the screening process proposed 
+    by Karl Bang Christensen and Svend Kreiner. The package includes an 
+    artificial example dataset adapted from the eRm package.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -15,7 +18,8 @@ URL: https://github.com/SebastianKvist99/twigg
 BugReports: https://github.com/SebastianKvist99/twigg/issues
 Imports: 
     stats,
-    vcdExtra
+    vcdExtra,
+    eRm
 Depends: 
     R (>= 3.5)
 LazyData: true

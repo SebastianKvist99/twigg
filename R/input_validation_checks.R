@@ -7,7 +7,7 @@
 #' @keywords internal
 #'
 
-complete_cases <- function(dataset, n){
+complete_cases <- function(dataset, n = 10){
   data <- stats::na.omit(dataset)
   if (nrow(data) < n){
     stop(

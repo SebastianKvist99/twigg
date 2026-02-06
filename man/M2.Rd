@@ -4,16 +4,26 @@
 \alias{M2}
 \title{M2 function to test for consistency}
 \usage{
-M2(dataset, items)
+M2(dataset, items, method = "gamma")
 }
 \arguments{
 \item{dataset}{A data set with item scores and covariates}
 
 \item{items}{A character vector}
+
+\item{method}{A string determining which associations method to use}
 }
 \value{
-A Boolean indicating whether the data set is consistent or not
+A list with the chosen associations measure, the explicit
+associations scores and a status indicating whether or not we passed the
+M2 criteria.
 }
 \description{
 M2 function to test for consistency
+}
+\examples{
+data <- toy_spadi_pain
+items <- paste0("pain", 1:5)
+M2(data, items, method = "gamma")
+
 }

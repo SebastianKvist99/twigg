@@ -4,7 +4,7 @@
 \alias{M1}
 \title{M1 test for consistence}
 \usage{
-M1(dataset, items)
+M1(dataset, items, method = "gamma")
 }
 \arguments{
 \item{dataset}{A data set with item scores and covariates}

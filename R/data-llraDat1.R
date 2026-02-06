@@ -1,0 +1,36 @@
+#' Artificial LLRA Dataset
+#'
+#' An artificial dataset originally provided with the \pkg{eRm} package,
+#'
+#' @format A data frame with XXX rows and XXX variables:
+#' \describe{
+#'   \item{t1.I1}{Description}
+#'   \item{t1.I2}{Description}
+#'   \item{t1.I3}{Description}
+#'   \item{t1.I4}{Description}
+#'   \item{t1.I5}{Description}
+#'   \item{t2.I1}{Description}
+#'   \item{t2.I2}{Description}
+#'   \item{t2.I3}{Description}
+#'   \item{t2.I4}{Description}
+#'   \item{t2.I5}{Description}
+#'   \item{t3.I1}{Description}
+#'   \item{t3.I2}{Description}
+#'   \item{t3.I3}{Description}
+#'   \item{t3.I4}{Description}
+#'   \item{t3.I5}{Description}
+#'   \item{t4.I1}{Description}
+#'   \item{t4.I2}{Description}
+#'   \item{t4.I3}{Description}
+#'   \item{t4.I4}{Description}
+#'   \item{t4.I5}{Description}
+#'   \item{t5.I1}{Description}
+#'   \item{t5.I2}{Description}
+#'   \item{t5.I3}{Description}
+#'   \item{t5.I4}{Description}
+#'   \item{t5.I5}{Description}
+#'   \item{groups}{Description}
+#' }
+#'
+#' @source Adapted from the \pkg{eRm} package.
+"llraDat1"

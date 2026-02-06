@@ -4,10 +4,12 @@
 \alias{complete_cases}
 \title{Complete case function}
 \usage{
-complete_cases(dataset)
+complete_cases(dataset, n = 10)
 }
 \arguments{
 \item{dataset}{an item repsosne data set}
+
+\item{n}{minimum number of observations}
 }
 \value{
 nothing or stops whatever the functions is called inside of if the if statement is fulfilled.
