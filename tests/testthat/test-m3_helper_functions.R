@@ -34,29 +34,7 @@ test_that("compute_total_score sums rows correctly", {
 })
 
 #############################################
-test_that("cor_one_pair returns correlation and p-value", {
 
-  x <- rnorm(50)
-  y <- x + rnorm(50, sd = 0.1)
-
-  res <- cor_one_pair(x, y, method = "pearson", include_pvalues = TRUE)
-
-  expect_true(is.list(res))
-  expect_named(res, c("correlation", "p_value"))
-  expect_true(res$correlation > 0.8)
-  expect_true(res$p_value < 0.001)
-})
-
-
-test_that("cor_one_pair omits p-values when requested", {
-
-  x <- rnorm(30)
-  y <- rnorm(30)
-
-  res <- cor_one_pair(x, y, include_pvalues = FALSE)
-
-  expect_true(is.na(res$p_value))
-})
 
 
 #############################################
@@ -68,8 +46,7 @@ test_that("M3_one_covariate returns correct structure", {
     covariate_name = "age",
     dataset = toy_spadi_pain,
     items = items,
-    method = "pearson",
-    include_pvalues = TRUE
+    method = "pearson"#, include_pvalues = TRUE
   )
 
   expect_s3_class(out, "data.frame")

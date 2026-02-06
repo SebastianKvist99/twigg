@@ -43,8 +43,8 @@
 screen_items <- function(dataset,
                            items,
                            covariates = NULL,
-                           corr_method = "pearson",
-                           include_pvalues = TRUE,
+                           method = "gamma",
+                           #include_pvalues = TRUE,
                            run_M1 = TRUE,
                            run_M2 = TRUE,
                            run_M3 = TRUE) {
@@ -74,41 +74,41 @@ screen_items <- function(dataset,
   # ---------------------------------------------------------
   results <- list()
   passed <- TRUE
-  failed_step <- NULL
+  failed_steps <- c()
 
   # ---- M1 --------------------------------------------------
   if (run_M1) {
-    M1_res <- M1(dataset, items)
+    M1_res <- M1(dataset, items, method)
     results$M1 <- M1_res
 
     #if (is.logical(M1_res) && !M1_res$status) {
     if (!M1_res$status) {
       passed <- FALSE
-      failed_step <- "M1"
-      return(structure(
-        c(list(passed = FALSE,
-               failed_step = failed_step),
-          results),
-        class = "item_screening"
-      ))
+      failed_steps <- c(failed_steps, "M1")
+      # return(structure(
+      #   c(list(passed = FALSE,
+      #          failed_step = failed_step),
+      #     results),
+      #   class = "item_screening"
+      # ))
     }
   }
 
   # ---- M2 --------------------------------------------------
   if (run_M2) {
-    M2_res <- M2(dataset, items)
+    M2_res <- M2(dataset, items, method)
     results$M2 <- M2_res
 
     #if (is.logical(M2_res) && !M2_res) {
     if (!M2_res$status) {
       passed <- FALSE
-      failed_step <- "M2"
-      return(structure(
-        c(list(passed = FALSE,
-               failed_step = failed_step),
-          results),
-        class = "item_screening"
-      ))
+      failed_steps <- c(failed_steps, "M2")
+      # return(structure(
+      #   c(list(passed = FALSE,
+      #          failed_step = failed_step),
+      #     results),
+      #   class = "item_screening"
+      # ))
     }
   }
 
@@ -118,8 +118,7 @@ screen_items <- function(dataset,
       dataset = dataset,
       items = items,
       covariates = covariates,
-      corr_method = corr_method,
-      include_pvalues = include_pvalues
+      corr_method = method#, include_pvalues = include_pvalues
     )
 
     results$M3 <- M3_res
@@ -127,12 +126,12 @@ screen_items <- function(dataset,
     if (!M3_res$status) {
       passed <- FALSE
       failed_step <- "M3"
-      return(structure(
-        c(list(passed = FALSE,
-               failed_step = failed_step),
-          results),
-        class = "item_screening"
-      ))
+      # return(structure(
+      #   c(list(passed = FALSE,
+      #          failed_step = failed_step),
+      #     results),
+      #   class = "item_screening"
+      # ))
     }
   }
 
@@ -141,7 +140,7 @@ screen_items <- function(dataset,
   # ---------------------------------------------------------
   structure(
     c(list(passed = passed,
-           failed_step = failed_step),
+           failed_steps = failed_steps),
       results),
     class = "item_screening"
   )

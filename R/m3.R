@@ -45,8 +45,8 @@
 #'   include_pvalues = TRUE
 #' )
 M3 <- function(dataset, items, covariates,
-               corr_method = "pearson",
-               include_pvalues = TRUE) {
+               corr_method = "gamma"){#,
+               #include_pvalues = TRUE) {
 
   dataset <- complete_cases(dataset, 10)
 
@@ -55,17 +55,27 @@ M3 <- function(dataset, items, covariates,
     M3_one_covariate,
     dataset = dataset,
     items = items,
-    method = corr_method,
-    include_pvalues = include_pvalues
+    method = corr_method#,    include_pvalues = include_pvalues
   )
 
   out <- do.call(rbind, results)
   out$correlation <- round(out$correlation, 3)
 
-  fulfilled <- all(tapply(sign(out$correlation),
-                          out$covariate,
-                          function(x) length(unique(x[x != 0])) <= 1))
+  # fulfilled <- all(tapply(sign(out$correlation),
+  #                         out$covariate,
+  #                         function(x) length(unique(x[x != 0])) <= 1))
+  fulfilled <- fulfilled <- tapply(
+    seq_len(nrow(out)),
+    out$covariate,
+    function(idx) check_M3_covariate(out[idx, ])
+  )
 
-  return(list(correlations = out, status = fulfilled))
+  list(
+    correlations = out,
+    status = all(fulfilled, na.rm = TRUE),
+    per_covariate = fulfilled
+  )
+
+  #return(list(correlations = out, status = fulfilled))
 }
 

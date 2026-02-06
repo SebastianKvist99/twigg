@@ -74,20 +74,29 @@ compute_total_score <- function(items_df) {
 #' y <- x + rnorm(50, sd = 0.1)
 #'
 #' cor_one_pair(x, y)
-#' cor_one_pair(x, y, include_pvalues = FALSE)
-cor_one_pair <- function(x, y, method = "pearson", include_pvalues = TRUE) {
-  if (include_pvalues) {
-    test <- stats::cor.test(x, y, method = method)
-    list(
-      correlation = unname(test$estimate),
-      p_value = test$p.value
-    )
-  } else {
-    list(
-      correlation = stats::cor(x, y, method = method),
-      p_value = NA_real_
-    )
+cor_one_pair <- function(x, y, method = "gamma"){#, include_pvalues = FALSE) {
+  if (!(method %in% c("pearson", "gamma", "spearman", "kendall"))){
+    stop("please input a valid method of associations measure")
   }
+
+  if (method == "gamma"){
+    return(DescTools::GoodmanKruskalGamma(x, y)#, conf.level = 0.95)
+           )
+  } else {
+    return(stats::cor(x,y, method = method))
+  }
+  # if (include_pvalues) {
+  #   test <- stats::cor.test(x, y, method = method)
+  #   list(
+  #     correlation = unname(test$estimate),
+  #     p_value = test$p.value
+  #   )
+  # } else {
+  #   list(
+  #     correlation = stats::cor(x, y, method = method),
+  #     p_value = NA_real_
+  #   )
+  # }
 }
 
 
@@ -124,7 +133,7 @@ cor_one_pair <- function(x, y, method = "pearson", include_pvalues = TRUE) {
 #'   method = "pearson",
 #'   include_pvalues = TRUE
 #' )
-M3_one_covariate <- function(covariate_name, dataset, items, method, include_pvalues) {
+M3_one_covariate <- function(covariate_name, dataset, items, method){#, include_pvalues=FALSE) {
 
   X_i <- check_covariate(dataset[[covariate_name]], covariate_name)
   items_df <- dataset[items]
@@ -134,13 +143,13 @@ M3_one_covariate <- function(covariate_name, dataset, items, method, include_pva
   idx <- 1
 
   # score-level association
-  res <- cor_one_pair(X_i, score, method, include_pvalues)
+  res <- cor_one_pair(X_i, score, method)#, include_pvalues)
   results[[idx]] <- data.frame(
     covariate = covariate_name,
     target_type = "score",
     target_name = "total_score",
-    correlation = res$correlation,
-    p_value = res$p_value,
+    correlation = res,#$association,
+    #p_value = res$p_value,
     method = method,
     stringsAsFactors = FALSE
   )
@@ -148,13 +157,13 @@ M3_one_covariate <- function(covariate_name, dataset, items, method, include_pva
 
   # item-level associations
   for (item in items) {
-    res <- cor_one_pair(X_i, items_df[[item]], method, include_pvalues)
+    res <- cor_one_pair(X_i, items_df[[item]], method)#, include_pvalues)
     results[[idx]] <- data.frame(
       covariate = covariate_name,
       target_type = "item",
       target_name = item,
-      correlation = res$correlation,
-      p_value = res$p_value,
+      correlation = res,#$association,
+      #p_value = res$p_value,
       method = method,
       stringsAsFactors = FALSE
     )
@@ -166,17 +175,24 @@ M3_one_covariate <- function(covariate_name, dataset, items, method, include_pva
 
 
 
-#' #' Simple pass/fail flag for M3 function.
-#' #'
-#' #' @param M3_output
-#' #'
-#' #' @returns Boolean indicting whether M3 passed or failed
-#' #'
-#' #'
-#' M3_pass <- function(M3_output) {
-#'   score_row <- M3_output$target_type == "score"
-#'   all(M3_output$correlation[score_row] > 0)
-#' }
+#' Title
+#'
+#' @param df a dataframe containing the associations
+#'
+#' @returns
+#'
+#' @examples
+check_M3_covariate <- function(df) {
+  score_sign <- sign(df$correlation[df$target_type == "score"])
+
+  # if score has no association, M3 is inconclusive
+  if (score_sign == 0) return(NA)
+
+  item_signs <- sign(df$correlation[df$target_type == "item"])
+
+  all(item_signs %in% c(score_sign, 0))
+}
+
 
 
 
