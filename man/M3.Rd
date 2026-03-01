@@ -4,7 +4,7 @@
 \alias{M3}
 \title{M3 covariate consistency check}
 \usage{
-M3(dataset, items, covariates, corr_method = "pearson", include_pvalues = TRUE)
+M3(dataset, items, covariates, corr_method = "gamma")
 }
 \arguments{
 \item{dataset}{A data frame containing item responses and covariates.}
@@ -53,7 +53,6 @@ M3(
   dataset = toy_spadi_pain,
   items = items,
   covariates = c("age", "sex"),
-  corr_method = "pearson",
-  include_pvalues = TRUE
+  corr_method = "gamma",
 )
 }

@@ -175,13 +175,16 @@ M3_one_covariate <- function(covariate_name, dataset, items, method){#, include_
 
 
 
-#' Title
+#' Check M3 covariate, checks if the direction of association for a covaraite
+#' and score pair is the same for that covariate and each individual item.
 #'
-#' @param df a dataframe containing the associations
+#' @param df a dataframe containing the associations, i.e. basically
+#' the output of M3.
 #'
-#' @returns
+#' @returns a boolean indocating if the direction of associations are consistent
 #'
-#' @examples
+#'@keywords internal
+#'
 check_M3_covariate <- function(df) {
   score_sign <- sign(df$correlation[df$target_type == "score"])
 

@@ -1,18 +1,29 @@
-#' M1 test for consistence
+#' M1 test for consistency.
 #'
-#' @param dataset A data set with item scores and covariates
+#' @param dataset A data set, can be a dataframe or a matrix, with item scores and
+#' covariates
 #' @param y A character vector with item names
+#' @param method A charecter string determining which kind of measure
+#' associations we want to use. Default is "gamma" which is Goodman and
+#' Kruskal's gamma, other possible values are "pearson", "spearman" and "kendall"
 #'
-#' @returns A Boolean indicating whether the dataset is consistent wrt the M1
-#' criteria
+#' @returns A list with the following elements; the associations measure used,
+#' the explicit values for the associations measures and finally the result of
+#' the test, i.e. a boolean indicating if the dataset passed M1 or not.
 #' @export
 #'
 #' @examples
 #' df <- toy_spadi_pain
 #' items <- paste0("pain", 1:5)
-#' M1(df, items)
+#' M1(df, items, method = "gamma")
+#' M1(df, items, method = "pearson")
 #'
 M1 <- function(dataset, items, method = "gamma"){
+
+  possible_methods <- c("gamma", "pearson", "spearman", "kendall")
+  if (!(method %in% possible_methods)){
+    stop("please input a valid method of associations measure", call. = FALSE)
+  }
 
   are_items_in_df(dataset, items)
   are_items_numeric(dataset, items)
@@ -31,20 +42,12 @@ M1 <- function(dataset, items, method = "gamma"){
         )
       }
     }
-  } else if (method == "pearson"){
-    associations <- stats::cor(X, method = "pearson")
-  } else if (method == "spearman"){
-    associations <- stats::cor(X, method = "spearman")
-  } else if (method == "kendall"){
-    associations <- stats::cor(X, method = "kendall")
   } else {
-    stop("please input a valid method of associations measure")
+    associations <- stats::cor(X, method = method)
   }
-  # fulfilled <- sum(corr_matrix<=0)==0
+
   status <- all(associations>0)
 
-  # return(list(correlations = corr_matrix,
-  #             status = fulfilled))
   return(list(method = method,
               associations = associations,
               status = status))

@@ -2,25 +2,31 @@
 % Please edit documentation in R/m1.R
 \name{M1}
 \alias{M1}
-\title{M1 test for consistence}
+\title{M1 test for consistency.}
 \usage{
 M1(dataset, items, method = "gamma")
 }
 \arguments{
 \item{dataset}{A data set with item scores and covariates}
 
+\item{method}{A charecter string determining which kind of measure
+associations we want to use. Default is "gamma" which is Goodman and
+Kruskal's gamma, other possible values are "pearson", "spearman" and "kendall"}
+
 \item{y}{A character vector with item names}
 }
 \value{
-A Boolean indicating whether the dataset is consistent wrt the M1
-criteria
+A list with the following elements; the associations measure used,
+the explicit values for the associations measures and finally the result of
+the test, i.e. a boolean indicating if the dataset passed M1 or not.
 }
 \description{
-M1 test for consistence
+M1 test for consistency.
 }
 \examples{
 df <- toy_spadi_pain
 items <- paste0("pain", 1:5)
-M1(df, items)
+M1(df, items, method = "gamma")
+M1(df, items, method = "pearson")
 
 }

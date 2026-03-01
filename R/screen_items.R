@@ -1,8 +1,15 @@
 #' Run item screening procedure
 #'
 #' Runs the item screening procedure by sequentially applying consistency checks
-#' M1, M2, and M3 as proposed in the item screening framework. The procedure stops
-#' early if a screening step fails and reports which step caused the failure.
+#' M1, M2, and M3 as proposed in the item screening framework. The procedure
+#' does NOT stop early if a screening step fails. The final print contains results
+#' from all the steps (M1, M2, and M3) and prints explicitly if we passed all steps or
+#' not. If we did not pass all steps, the name of the failed steps are printed
+#' explicitly. However, we can manually decide whether or not individual steps
+#' should be performed, default is that all steps are performed, but can be changed
+#' by passing the argument "run_M1 = FALSE" e.g. However M3 is only run
+#' if "run_M3=TRUE" (default) and some covariates are passed to the function
+#' (otherwise it does not make sense to run it hence it wont).
 #'
 #' @param dataset A data frame containing item responses and covariates.
 #' @param items Character vector giving the names of item response variables.

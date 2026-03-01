@@ -2,19 +2,23 @@
 % Please edit documentation in R/input_validation_checks.R
 \name{complete_cases}
 \alias{complete_cases}
-\title{Complete case function}
+\title{Complete case function.
+Checks how many complete cases the passed dataset contains and drops the
+observations which contains NA.}
 \usage{
 complete_cases(dataset, n = 10)
 }
 \arguments{
-\item{dataset}{an item repsosne data set}
+\item{dataset}{A dataset}
 
-\item{n}{minimum number of observations}
+\item{n}{minimum number of observations, default is set to 10}
 }
 \value{
 nothing or stops whatever the functions is called inside of if the if statement is fulfilled.
 }
 \description{
-Complete case function
+Complete case function.
+Checks how many complete cases the passed dataset contains and drops the
+observations which contains NA.
 }
 \keyword{internal}

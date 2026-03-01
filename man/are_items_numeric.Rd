@@ -2,14 +2,23 @@
 % Please edit documentation in R/input_validation_checks.R
 \name{are_items_numeric}
 \alias{are_items_numeric}
-\title{Title}
+\title{Are items numeric, does exactly what the function says, it checks if the items
+in the passed df are actually numeric.}
 \usage{
 are_items_numeric(df, items)
 }
 \arguments{
-\item{items}{}
+\item{df}{A dataset}
+
+\item{items}{A vector of charecters, which should be the names of the items
+in the dataset.}
+}
+\value{
+NULL, if all items are in fact numeric. If one or more items does not
+fulfill the requirement the function stops and throws an appropriate error.
 }
 \description{
-Title
+Are items numeric, does exactly what the function says, it checks if the items
+in the passed df are actually numeric.
 }
 \keyword{internal}

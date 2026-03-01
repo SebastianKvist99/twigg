@@ -2,7 +2,9 @@
 #'
 #' @param dataset A data set with item scores and covariates
 #' @param items A character vector
-#' @param method A string determining which associations method to use
+#' @param method A string determining which associations method to use. Default is
+#' set to gamma, which is Goodman and Kruskal's gamma, other possible methods are
+#' "spearman", "pearson" and "kendall".
 #'
 #' @returns A list with the chosen associations measure, the explicit
 #' associations scores and a status indicating whether or not we passed the
@@ -16,6 +18,12 @@
 #' M2(data, items, method = "gamma")
 #'
 M2 <- function(dataset, items, method = "gamma") {
+
+  possible_methods <- c("gamma", "pearson", "spearman", "kendall")
+  if (!(method %in% possible_methods)){
+    stop("please input a valid method of associations measure", call. = FALSE)
+  }
+
   # input validation checks
   are_items_in_df(dataset, items)
   are_items_numeric(dataset, items)
@@ -31,8 +39,6 @@ M2 <- function(dataset, items, method = "gamma") {
 
   # rest score matrix
   rest <- total_mat - X
-  # # Type of associations measure
-  # associations_method <- method
 
   # item–rest associations
   if (method == "gamma"){
@@ -41,14 +47,8 @@ M2 <- function(dataset, items, method = "gamma") {
         x = X[, i],
         y = rest[, i]
       )}, numeric(1))
-  } else if (method == "pearson"){
-    associations <- diag(stats::cor(X, rest, method = "pearson"))
-  } else if (method == "spearman"){
-    associations <- diag(stats::cor(X, rest, method = "spearman"))
-  } else if (method == "kendall"){
-    associations <- diag(stats::cor(X, rest, method = "kendall"))
   } else {
-    stop("please input a valid method of associations measure")
+    associations <- diag(stats::cor(X, rest, method = method))
   }
 
   # M2 condition: all positive

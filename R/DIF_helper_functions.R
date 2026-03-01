@@ -7,15 +7,15 @@
 #'
 #' @returns
 #'
-part_gam <- function(){
-
-}
-
-con_dis_pairs <- function(){
-
-}
-
-is_crit <- function(){
-
-}
+# part_gam <- function(){
+#
+# }
+#
+# con_dis_pairs <- function(){
+#
+# }
+#
+# is_crit <- function(){
+#
+# }
 

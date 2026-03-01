@@ -2,14 +2,23 @@
 % Please edit documentation in R/input_validation_checks.R
 \name{are_covaraites_in_df}
 \alias{are_covaraites_in_df}
-\title{Title}
+\title{Are covariates in df, does exatcly what the names says, it checks whether the
+passed list of covariate names all are actual dataset passed to the funciton.}
 \usage{
 are_covaraites_in_df(df, covariates)
 }
 \arguments{
-\item{covariates}{}
+\item{df}{A dataset}
+
+\item{covariates}{A vector of charecters all corrospnding to covaraite names
+in the dataset}
+}
+\value{
+NULL, if all covariates are in df, if any covaraite in the covaraites
+argument is not in the df the function stops and throws an error.
 }
 \description{
-Title
+Are covariates in df, does exatcly what the names says, it checks whether the
+passed list of covariate names all are actual dataset passed to the funciton.
 }
 \keyword{internal}

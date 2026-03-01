@@ -11,7 +11,9 @@ M2(dataset, items, method = "gamma")
 
 \item{items}{A character vector}
 
-\item{method}{A string determining which associations method to use}
+\item{method}{A string determining which associations method to use. Default is
+set to gamma, which is Goodman and Kruskal's gamma, other possible methods are
+"spearman", "pearson" and "kendall".}
 }
 \value{
 A list with the chosen associations measure, the explicit

@@ -2,14 +2,23 @@
 % Please edit documentation in R/input_validation_checks.R
 \name{are_items_in_df}
 \alias{are_items_in_df}
-\title{Title}
+\title{are_items_in_df, does exactly what the title says, it checks whether or not
+the passed items are in the passed dataframe}
 \usage{
 are_items_in_df(df, items)
 }
 \arguments{
-\item{items}{}
+\item{df}{A dataset.}
+
+\item{items}{a vector of charecters, which should be the names of the items
+in the dataset.}
+}
+\value{
+NULL, if all items are in df, if any item in the items argument is
+not in the df the function stops and throws an error.
 }
 \description{
-Title
+are_items_in_df, does exactly what the title says, it checks whether or not
+the passed items are in the passed dataframe
 }
 \keyword{internal}

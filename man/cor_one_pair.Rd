@@ -5,7 +5,7 @@
 \title{Compute correlation between two variables. Optionally includes the p-value
 from the correlation test.}
 \usage{
-cor_one_pair(x, y, method = "pearson", include_pvalues = TRUE)
+cor_one_pair(x, y, method = "gamma")
 }
 \arguments{
 \item{x}{Numeric vector}
@@ -33,6 +33,5 @@ x <- rnorm(50)
 y <- x + rnorm(50, sd = 0.1)
 
 cor_one_pair(x, y)
-cor_one_pair(x, y, include_pvalues = FALSE)
 }
 \keyword{internal}

@@ -8,8 +8,7 @@ screen_items(
   dataset,
   items,
   covariates = NULL,
-  corr_method = "pearson",
-  include_pvalues = TRUE,
+  method = "gamma",
   run_M1 = TRUE,
   run_M2 = TRUE,
   run_M3 = TRUE
@@ -23,17 +22,17 @@ screen_items(
 \item{covariates}{Optional character vector giving the names of covariates
 to be screened using the M3 criterion.}
 
-\item{corr_method}{Character string specifying the correlation method used
-in M3. Passed to \code{\link[stats]{cor.test}}.}
-
-\item{include_pvalues}{Logical; if \code{TRUE}, p-values are included in the
-M3 output.}
-
 \item{run_M1}{Logical; should the M1 screening step be performed?}
 
 \item{run_M2}{Logical; should the M2 screening step be performed?}
 
 \item{run_M3}{Logical; should the M3 screening step be performed?}
+
+\item{corr_method}{Character string specifying the correlation method used
+in M3. Passed to \code{\link[stats]{cor.test}}.}
+
+\item{include_pvalues}{Logical; if \code{TRUE}, p-values are included in the
+M3 output.}
 }
 \value{
 An object of class \code{"item_screening"}, which is a named list
@@ -49,8 +48,13 @@ failed, or \code{NULL} if all steps passed.}
 }
 \description{
 Runs the item screening procedure by sequentially applying consistency checks
-M1, M2, and M3 as proposed in the item screening framework. The procedure stops
-early if a screening step fails and reports which step caused the failure.
+M1, M2, and M3 as proposed in the item screening framework. The procedure
+does NOT stop early if a screening step fails. The final print contains results
+from all the steps (M1, M2, and M3) and prints explicitly if we passed all steps or
+not. If we did not pass all steps, the name of the failed steps are printed
+explicitly. However, we can manually decide whether or not individual steps
+should be performed, default is that all steps are performed, but can be changed
+by passing the argument "run_M1 = FALSE" e.g.
 }
 \examples{
 items <- paste0("pain", 1:5)

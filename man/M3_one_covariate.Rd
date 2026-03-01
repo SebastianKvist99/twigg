@@ -4,7 +4,7 @@
 \alias{M3_one_covariate}
 \title{Perform M3 screening for a single covariate}
 \usage{
-M3_one_covariate(covariate_name, dataset, items, method, include_pvalues)
+M3_one_covariate(covariate_name, dataset, items, method)
 }
 \arguments{
 \item{covariate_name}{Character string giving the name of the covariate.}
