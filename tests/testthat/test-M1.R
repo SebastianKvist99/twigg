@@ -19,6 +19,11 @@ test_that("M1 function works with different methods", {
 
 })
 
+test_that("M1 works with both dataframes and matrix style inputs",{
+  matrix_style <- as.matrix(toy_spadi_pain)
+})
+
+
 test_that("M1 test on data which is negativly correlated", {
   df <- data.frame(
     x1 = 1:10,
