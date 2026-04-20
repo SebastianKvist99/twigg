@@ -16,7 +16,7 @@
 #' @param corr_method Character string specifying the correlation method to use.
 #'   Passed to \code{\link[stats]{cor.test}} (e.g., \code{"pearson"},
 #'   \code{"spearman"}).
-#' @param include_pvalues Logical; if \code{TRUE}, p-values from correlation tests
+#'  include_pvalues Logical; if \code{TRUE}, p-values from correlation tests
 #'   are included in the output.
 #'
 #' @returns A data frame with one row per tested association and the following
@@ -40,8 +40,7 @@
 #' M3(
 #'   dataset = toy_spadi_pain,
 #'   items = items,
-#'   covariates = c("age", "sex"),
-#'   corr_method = "gamma",
+#'   covariates = c("age", "sex")
 #' )
 M3 <- function(dataset, items, covariates,
                corr_method = "gamma"){#,

@@ -13,9 +13,8 @@ M3_one_covariate(covariate_name, dataset, items, method)
 
 \item{items}{Character vector with names of item response variables.}
 
-\item{method}{Character string specifying the correlation method.}
-
-\item{include_pvalues}{Logical; if \code{TRUE}, p-values are included.}
+\item{method}{Character string specifying the correlation method.
+include_pvalues Logical; if \code{TRUE}, p-values are included.}
 }
 \value{
 A data frame with one row per tested association, containing:
@@ -40,8 +39,6 @@ M3_one_covariate(
   covariate_name = "age",
   dataset = toy_spadi_pain,
   items = items,
-  method = "pearson",
-  include_pvalues = TRUE
-)
+  method = "pearson")
 }
 \keyword{internal}
