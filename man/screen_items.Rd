@@ -20,19 +20,19 @@ screen_items(
 \item{items}{Character vector giving the names of item response variables.}
 
 \item{covariates}{Optional character vector giving the names of covariates
-to be screened using the M3 criterion.}
+to be screened using the M3 criterion.
+corr_method Character string specifying the correlation method used
+in M3. Passed to \code{\link[stats]{cor.test}}.
+include_pvalues Logical; if \code{TRUE}, p-values are included in the
+M3 output.}
+
+\item{method}{Character string specifying the desired measure of association}
 
 \item{run_M1}{Logical; should the M1 screening step be performed?}
 
 \item{run_M2}{Logical; should the M2 screening step be performed?}
 
 \item{run_M3}{Logical; should the M3 screening step be performed?}
-
-\item{corr_method}{Character string specifying the correlation method used
-in M3. Passed to \code{\link[stats]{cor.test}}.}
-
-\item{include_pvalues}{Logical; if \code{TRUE}, p-values are included in the
-M3 output.}
 }
 \value{
 An object of class \code{"item_screening"}, which is a named list
@@ -54,7 +54,9 @@ from all the steps (M1, M2, and M3) and prints explicitly if we passed all steps
 not. If we did not pass all steps, the name of the failed steps are printed
 explicitly. However, we can manually decide whether or not individual steps
 should be performed, default is that all steps are performed, but can be changed
-by passing the argument "run_M1 = FALSE" e.g.
+by passing the argument "run_M1 = FALSE" e.g. However M3 is only run
+if "run_M3=TRUE" (default) and some covariates are passed to the function
+(otherwise it does not make sense to run it hence it wont).
 }
 \examples{
 items <- paste0("pain", 1:5)

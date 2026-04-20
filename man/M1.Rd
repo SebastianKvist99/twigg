@@ -7,13 +7,14 @@
 M1(dataset, items, method = "gamma")
 }
 \arguments{
-\item{dataset}{A data set with item scores and covariates}
+\item{dataset}{A data set, can be a dataframe or a matrix, with item scores and
+covariates}
+
+\item{items}{A character vector with item names}
 
 \item{method}{A charecter string determining which kind of measure
 associations we want to use. Default is "gamma" which is Goodman and
 Kruskal's gamma, other possible values are "pearson", "spearman" and "kendall"}
-
-\item{y}{A character vector with item names}
 }
 \value{
 A list with the following elements; the associations measure used,

@@ -15,10 +15,11 @@
 #' @param items Character vector giving the names of item response variables.
 #' @param covariates Optional character vector giving the names of covariates
 #'   to be screened using the M3 criterion.
-#' @param corr_method Character string specifying the correlation method used
+#' corr_method Character string specifying the correlation method used
 #'   in M3. Passed to \code{\link[stats]{cor.test}}.
-#' @param include_pvalues Logical; if \code{TRUE}, p-values are included in the
+#'  include_pvalues Logical; if \code{TRUE}, p-values are included in the
 #'   M3 output.
+#' @param method Character string specifying the desired measure of association
 #' @param run_M1 Logical; should the M1 screening step be performed?
 #' @param run_M2 Logical; should the M2 screening step be performed?
 #' @param run_M3 Logical; should the M3 screening step be performed?

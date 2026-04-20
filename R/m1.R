@@ -2,7 +2,7 @@
 #'
 #' @param dataset A data set, can be a dataframe or a matrix, with item scores and
 #' covariates
-#' @param y A character vector with item names
+#' @param items A character vector with item names
 #' @param method A charecter string determining which kind of measure
 #' associations we want to use. Default is "gamma" which is Goodman and
 #' Kruskal's gamma, other possible values are "pearson", "spearman" and "kendall"

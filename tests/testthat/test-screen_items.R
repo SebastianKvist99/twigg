@@ -19,24 +19,27 @@ test_that("screen_items passes all steps on toy SPADI data", {
 })
 
 ## ---------------------------------------- ##
-test_that("screen_items stops early when M1 fails", {
-
-  bad_data <- toy_spadi_pain
-  # induce negative correlation to make M1 fail
-  bad_data$pain1 <- rev(bad_data$pain1)
-
-  items <- paste0("pain", 1:5)
-
-  res <- screen_items(
-    dataset = bad_data,
-    items = items,
-    covariates = c("age", "sex")
-  )
-
-  expect_false(res$passed)
-  expect_equal(res$failed_step, "M1")
-  expect_true("M1" %in% res$failed_step)
-})
+# Drop this test as the early stop is no longer desired. We want to run the full
+# screening even if we fail in the first step, since we want to see if we also fail
+# any other steps
+# test_that("screen_items stops early when M1 fails", {
+#
+#   bad_data <- toy_spadi_pain
+#   # induce negative correlation to make M1 fail
+#   bad_data$pain1 <- rev(bad_data$pain1)
+#
+#   items <- paste0("pain", 1:5)
+#
+#   res <- screen_items(
+#     dataset = bad_data,
+#     items = items,
+#     covariates = c("age", "sex")
+#   )
+#
+#   expect_false(res$passed)
+#   expect_equal(res$failed_step, "M1")
+#   expect_true("M1" %in% res$failed_step)
+# })
 ## ---------------------------------------- ##
 # We should make a similar test as above but for M2 failure and M3 failure
 
