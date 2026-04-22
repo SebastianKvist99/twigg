@@ -13,8 +13,7 @@ M3_one_covariate(covariate_name, dataset, items, method)
 
 \item{items}{Character vector with names of item response variables.}
 
-\item{method}{Character string specifying the correlation method.
-include_pvalues Logical; if \code{TRUE}, p-values are included.}
+\item{method}{Character string specifying the correlation method.}
 }
 \value{
 A data frame with one row per tested association, containing:
@@ -33,11 +32,12 @@ between the covariate and each individual item. This corresponds to the M3
 consistency requirement in Rasch item screening procedures.
 }
 \examples{
+data <- toy_spadi_pain
 items <- paste0("pain", 1:5)
 
 M3_one_covariate(
   covariate_name = "age",
-  dataset = toy_spadi_pain,
+  dataset = data,
   items = items,
   method = "pearson")
 }

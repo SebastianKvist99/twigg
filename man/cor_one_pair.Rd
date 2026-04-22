@@ -12,9 +12,7 @@ cor_one_pair(x, y, method = "gamma")
 
 \item{y}{Numeric vector of same length as x (variable 1)}
 
-\item{method}{Character string for deciding which correlation method to use.
-include_pvalues Boolean, indicating whether or not the p-value should
-be included. Default is set to TRUE.}
+\item{method}{Character string for deciding which correlation method to use.}
 }
 \value{
 A named list with elements:

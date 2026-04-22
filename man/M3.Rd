@@ -17,9 +17,7 @@ in \code{dataset}.}
 
 \item{corr_method}{Character string specifying the correlation method to use.
 Passed to \code{\link[stats]{cor.test}} (e.g., \code{"pearson"},
-\code{"spearman"}).
-include_pvalues Logical; if \code{TRUE}, p-values from correlation tests
-are included in the output.}
+\code{"spearman"}).}
 }
 \value{
 A data frame with one row per tested association and the following
@@ -46,10 +44,11 @@ The M3 criterion requires that covariates related to the latent trait show
 consistent directional associations with item responses and the total score.
 }
 \examples{
+data <- toy_spadi_pain
 items <- paste0("pain", 1:5)
 
 M3(
-  dataset = toy_spadi_pain,
+  dataset = data,
   items = items,
   covariates = c("age", "sex")
 )

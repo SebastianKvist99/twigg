@@ -33,10 +33,11 @@
 #' @export
 #'
 #' @examples
+#' data <- toy_spadi_pain
 #' items <- paste0("pain", 1:5)
 #'
 #' M3(
-#'   dataset = toy_spadi_pain,
+#'   dataset = data,
 #'   items = items,
 #'   covariates = c("age", "sex")
 #' )

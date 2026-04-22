@@ -121,11 +121,12 @@ cor_one_pair <- function(x, y, method = "gamma"){#, include_pvalues = FALSE) {
 #' @keywords internal
 #'
 #' @examples
+#' data <- toy_spadi_pain
 #' items <- paste0("pain", 1:5)
 #'
 #' M3_one_covariate(
 #'   covariate_name = "age",
-#'   dataset = toy_spadi_pain,
+#'   dataset = data,
 #'   items = items,
 #'   method = "pearson")
 M3_one_covariate <- function(covariate_name, dataset, items, method){#, include_pvalues=FALSE) {

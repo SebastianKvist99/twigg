@@ -20,11 +20,7 @@ screen_items(
 \item{items}{Character vector giving the names of item response variables.}
 
 \item{covariates}{Optional character vector giving the names of covariates
-to be screened using the M3 criterion.
-corr_method Character string specifying the correlation method used
-in M3. Passed to \code{\link[stats]{cor.test}}.
-include_pvalues Logical; if \code{TRUE}, p-values are included in the
-M3 output.}
+to be screened using the M3 criterion.}
 
 \item{method}{Character string specifying the desired measure of association}
 
