@@ -59,8 +59,6 @@ compute_total_score <- function(items_df) {
 #' @param x Numeric vector
 #' @param y Numeric vector of same length as x (variable 1)
 #' @param method Character string for deciding which correlation method to use.
-#'  include_pvalues Boolean, indicating whether or not the p-value should
-#' be included. Default is set to TRUE.
 #'
 #' @returns A named list with elements:
 #' \describe{
@@ -110,7 +108,6 @@ cor_one_pair <- function(x, y, method = "gamma"){#, include_pvalues = FALSE) {
 #' @param dataset A data frame containing item responses and covariates.
 #' @param items Character vector with names of item response variables.
 #' @param method Character string specifying the correlation method.
-#' include_pvalues Logical; if \code{TRUE}, p-values are included.
 #'
 #' @returns A data frame with one row per tested association, containing:
 #' \describe{

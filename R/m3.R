@@ -16,8 +16,6 @@
 #' @param corr_method Character string specifying the correlation method to use.
 #'   Passed to \code{\link[stats]{cor.test}} (e.g., \code{"pearson"},
 #'   \code{"spearman"}).
-#'  include_pvalues Logical; if \code{TRUE}, p-values from correlation tests
-#'   are included in the output.
 #'
 #' @returns A data frame with one row per tested association and the following
 #'   columns:
