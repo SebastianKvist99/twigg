@@ -73,24 +73,37 @@ screen_LD <- function(df, items, crit_val = 0.05){
 
 #' Genuine LD Identifier.
 #'
-#' This function effectivly performs step 3a. of the posed item screening.
+#' This function performs step 3a. of the posed item screening.
 #' We take the output from the screen_LD function, which flags all LD with a
 #' significant partial gamma coefficient. On this LD data we compute the mean
 #' partial gamma coefficient for each pair (i.e. the mean of the partial gamma
-#' produced by checking the hypothesies \eqn{Y_i \bot Y_j \mid R_i} and
-#' \eqn{Y_j \bot Y_i \mid R_j})
+#' produced by checking the hypothesis \eqn{Y_i \bot Y_j \mid R_i} and
+#' \eqn{Y_j \bot Y_i \mid R_j}). The highest absolute mean partial gamma coefficient
+#' is then taken at face value and results obtained by conditioning on either
+#' \eqn{Y_i} or \eqn{Y_j} are ignored, this procedure is performed literately the
+#' data frame from screen_LD is empty.
 #'
 #' @param screen_LD_output the output from the screen_LD function.
 #' @param crit_val The value at which we determine an adjusted pvalue is
 #' critical
 #'
-#' @returns description
+#' @returns A list with two data frames both containing LD tests. When called
+#' directly only the genuine_ld data frame is printed.
+#' \describe{
+#'  \item{genuine_ld} The reuslting LD after after deletion of spurious LD
+#'  \item{all_ld_detected} All LD, including the spurious. This is the LD data
+#'  frame that we use input to the algorithm and the genuine_ld data frame is its output.
+#' }
 #'
-#' @details
 #'
 #' @export
 #'
 #' @examples
+#' data <- toy_sp_DIF_and_LD
+#' items <- paste0("pain", 1:5)
+#' screen_ld_output <- screen_LD(data, items)
+#' genuine_ld_output <- genuine_LD(screen_ld_output)
+#'
 genuine_LD <- function(screen_LD_output, crit_val = 0.05){
   reported.ld <- screen_LD_output$reported_LD
   all.ld <- screen_LD_output$all_LD
@@ -154,9 +167,11 @@ genuine_LD <- function(screen_LD_output, crit_val = 0.05){
                      "Item2.1" = "item2",
                      "mean_gamma" = "mean_gamma")
   genuine.ld <- stats::setNames(genuine.ld, names_old2new)
-  ## ** return genuine LD df
-  return(list("genuine_ld" = genuine.ld,
-              "all_ld" = results))
+  ## ** print and return genuine LD df
+  results2report <- list("genuine_ld" = genuine.ld,
+                         "all_ld_detected" = results)
+  print(results2report$genuine_ld)
+  return(invisible(results2report))
 }
 
 
