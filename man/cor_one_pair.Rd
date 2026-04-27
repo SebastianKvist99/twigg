@@ -25,10 +25,4 @@ A named list with elements:
 Compute correlation between two variables. Optionally includes the p-value
 from the correlation test.
 }
-\examples{
-x <- rnorm(50)
-y <- x + rnorm(50, sd = 0.1)
-
-cor_one_pair(x, y)
-}
 \keyword{internal}

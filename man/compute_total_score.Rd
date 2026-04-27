@@ -17,7 +17,4 @@ the row sums of the items data frame
 Total score computer. Computes the total score of each participant, i.e.
 the row sum of items per participant
 }
-\examples{
-compute_total_score(data.frame(item1 = c(1,1,1), item2 = c(2,2,2)))
-}
 \keyword{internal}

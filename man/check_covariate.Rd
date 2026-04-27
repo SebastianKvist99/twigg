@@ -20,10 +20,4 @@ nor a factor
 \description{
 Check covaraite type
 }
-\examples{
-check_covariate(c(20,22,45), "age")
-
-check_covariate(factor(c("f", "f", "m")), "sex")
-
-}
 \keyword{internal}

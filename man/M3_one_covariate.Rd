@@ -31,14 +31,4 @@ Computes correlations between one covariate and the total score, as well as
 between the covariate and each individual item. This corresponds to the M3
 consistency requirement in Rasch item screening procedures.
 }
-\examples{
-data <- toy_spadi_pain
-items <- paste0("pain", 1:5)
-
-M3_one_covariate(
-  covariate_name = "age",
-  dataset = data,
-  items = items,
-  method = "pearson")
-}
 \keyword{internal}

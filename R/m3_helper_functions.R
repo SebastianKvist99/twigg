@@ -10,11 +10,6 @@
 #'
 #' @keywords internal
 #'
-#' @examples
-#' check_covariate(c(20,22,45), "age")
-#'
-#' check_covariate(factor(c("f", "f", "m")), "sex")
-#'
 check_covariate <- function(x, name) {
 
   if (is.numeric(x)) {
@@ -46,8 +41,6 @@ check_covariate <- function(x, name) {
 #' @returns the row sums of the items data frame
 #' @keywords internal
 #'
-#' @examples
-#' compute_total_score(data.frame(item1 = c(1,1,1), item2 = c(2,2,2)))
 compute_total_score <- function(items_df) {
   return(rowSums(items_df))
 }
@@ -67,11 +60,6 @@ compute_total_score <- function(items_df) {
 #' }
 #' @keywords internal
 #'
-#' @examples
-#' x <- rnorm(50)
-#' y <- x + rnorm(50, sd = 0.1)
-#'
-#' cor_one_pair(x, y)
 cor_one_pair <- function(x, y, method = "gamma"){#, include_pvalues = FALSE) {
   if (!(method %in% c("pearson", "gamma", "spearman", "kendall"))){
     stop("please input a valid method of associations measure")
@@ -120,15 +108,6 @@ cor_one_pair <- function(x, y, method = "gamma"){#, include_pvalues = FALSE) {
 #' }
 #' @keywords internal
 #'
-#' @examples
-#' data <- toy_spadi_pain
-#' items <- paste0("pain", 1:5)
-#'
-#' M3_one_covariate(
-#'   covariate_name = "age",
-#'   dataset = data,
-#'   items = items,
-#'   method = "pearson")
 M3_one_covariate <- function(covariate_name, dataset, items, method){#, include_pvalues=FALSE) {
 
   X_i <- check_covariate(dataset[[covariate_name]], covariate_name)
