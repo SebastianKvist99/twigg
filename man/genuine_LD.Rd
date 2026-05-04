@@ -13,13 +13,30 @@ genuine_LD(screen_LD_output, crit_val = 0.05)
 critical}
 }
 \value{
-description
+A list with two data frames both containing LD tests. When called
+directly only the genuine_ld data frame is printed.
+\describe{
+\item{genuine_ld}{The reuslting LD after after deletion of spurious LD}
+\item{all_ld_detected}{All LD, including the spurious. This is the LD data
+frame that we use input to the algorithm and the genuine_ld data frame is
+its output.}
+}
 }
 \description{
-This function effectivly performs step 3a. of the posed item screening.
+This function performs step 3a. of the posed item screening.
 We take the output from the screen_LD function, which flags all LD with a
 significant partial gamma coefficient. On this LD data we compute the mean
 partial gamma coefficient for each pair (i.e. the mean of the partial gamma
-produced by checking the hypothesies \eqn{Y_i \bot Y_j \mid R_i} and
-\eqn{Y_j \bot Y_i \mid R_j})
+produced by checking the hypothesis \eqn{Y_i \bot Y_j \mid R_i} and
+\eqn{Y_j \bot Y_i \mid R_j}). The highest absolute mean partial gamma coefficient
+is then taken at face value and results obtained by conditioning on either
+\eqn{Y_i} or \eqn{Y_j} are ignored, this procedure is performed literately the
+data frame from screen_LD is empty.
+}
+\examples{
+data <- toy_sp_DIF_and_LD
+items <- paste0("pain", 1:5)
+screen_ld_output <- screen_LD(data, items)
+genuine_ld_output <- genuine_LD(screen_ld_output)
+
 }

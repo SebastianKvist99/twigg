@@ -70,3 +70,23 @@ are_items_numeric <- function(df, items){
 }
 
 
+
+
+#' convert data set to correct data type
+#'
+#' @param dataset
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+correct.dataset.structure <- function(dataset){
+  if (!(class(dataset) == "data.frame")){
+    correct.data <- as.data.frame(dataset)
+  }
+}
+## Hvad gør vi hvis datasættet ikke kan konverteres til en data frame?
+
+
+
+

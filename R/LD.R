@@ -13,7 +13,7 @@
 #' exhibiting LD.
 #'
 #'
-#' @param df A data frame containing item responses and covariates.
+#' @param dataset A data frame containing item responses and covariates.
 #' @param items A character vector of column names corresponding to the items.
 #' @param crit_val Numeric. Significance threshold for the adjusted p-values.
 #'   Default is set to \code{0.05}.
@@ -40,11 +40,11 @@
 #' data_items <- paste0("pain", 1:5)
 #'
 #' screen_LD(data, data_items)
-screen_LD <- function(df, items, crit_val = 0.05){
+screen_LD <- function(dataset, items, crit_val = 0.05){
   ## ** Check input
-  are_items_numeric(df, items)
-  are_items_in_df(df, items)
-  data <- complete_cases(df, 10)
+  are_items_numeric(dataset, items)
+  are_items_in_df(dataset, items)
+  data <- complete_cases(dataset, 10)
 
 
   ## ** Use our modified version of iarm::partgam_LD to compute partial gammas
@@ -62,6 +62,17 @@ screen_LD <- function(df, items, crit_val = 0.05){
   ## ** extract the rows with adjusted p-value less than or equal to crit_val
   ld.df1.2report <- subset(ld.df1, ld.df1[ , 6]<= crit_val)
   ld.df2.2report <- subset(ld.df2, ld.df2[ , 6]<= crit_val)
+  ## ** Fix row names
+  row.names(ld.df1.2report) <- NULL
+  row.names(ld.df2.2report) <- NULL
+
+  ## ** If nrow(ld.df1.2report) == 0 should be stated no LD found druing screening
+  if (nrow(ld.df1.2report) == 0){
+    ld.df1.2report <- "No LD detected druing initial screening"
+  }
+  if (nrow(ld.df2.2report) == 0){
+    ld.df2.2report <- "No LD detected druing initial screening"
+  }
 
   print(list(ld.df1.2report, ld.df2.2report))
   return(invisible(list(
@@ -90,9 +101,10 @@ screen_LD <- function(df, items, crit_val = 0.05){
 #' @returns A list with two data frames both containing LD tests. When called
 #' directly only the genuine_ld data frame is printed.
 #' \describe{
-#'  \item{genuine_ld} The reuslting LD after after deletion of spurious LD
-#'  \item{all_ld_detected} All LD, including the spurious. This is the LD data
-#'  frame that we use input to the algorithm and the genuine_ld data frame is its output.
+#'  \item{genuine_ld}{The reuslting LD after after deletion of spurious LD}
+#'  \item{all_ld_detected}{All LD, including the spurious. This is the LD data
+#'  frame that we use input to the algorithm and the genuine_ld data frame is
+#'  its output.}
 #' }
 #'
 #'
@@ -116,11 +128,11 @@ genuine_LD <- function(screen_LD_output, crit_val = 0.05){
   ld2$pair_id <- paste(pmin(ld2$Item1, ld2$Item2),
                        pmax(ld2$Item1, ld2$Item2), sep = "_")
   ## ** filter significant rows in both df's
-  ld1.sig <- subset(ld1, ld1[,6]<= crit_val)
-  ld2.sig <- subset(ld2, ld2[,6]<= crit_val)
+  ld1.sig <- subset(ld1, ld1[,6] <= crit_val)
+  ld2.sig <- subset(ld2, ld2[,6] <= crit_val)
 
   ## ** extract pair_id for all pairs in the two significant df's
-  all.pair.ids <- union(ld1.sig$pair_id, ld2.sig$pair_id)
+  all.pair.ids <- base::union(ld1.sig$pair_id, ld2.sig$pair_id)
 
   ## ** extract these significant pairs from both df's
   ld1.keep <- ld1[ld1$pair_id %in% all.pair.ids, ]
@@ -167,6 +179,11 @@ genuine_LD <- function(screen_LD_output, crit_val = 0.05){
                      "Item2.1" = "item2",
                      "mean_gamma" = "mean_gamma")
   genuine.ld <- stats::setNames(genuine.ld, names_old2new)
+
+  ## ** If nrow(genuine.ld) == 0 should be stated no genuine LD found
+  if (nrow(genuine.ld) == 0){
+    genuine.ld <- "No genuine LD detected"
+  }
   ## ** print and return genuine LD df
   results2report <- list("genuine_ld" = genuine.ld,
                          "all_ld_detected" = results)
@@ -175,3 +192,153 @@ genuine_LD <- function(screen_LD_output, crit_val = 0.05){
 }
 
 
+
+
+#' Genuine LD identifyier
+#'
+#' @param screen_LD_output
+#' @param number_of_multiple_tests
+#' @param method
+#' @param crit_val
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+genuine_LD2 <- function(screen_LD_output, number_of_multiple_tests = NULL,
+                        method = "BH", crit_val = 0.05){
+
+  all.ld <- screen_LD_output$all_LD
+  ## ---- define number of multiple tests if not specified. Default is hence
+  ## ---- just the number of LD tests.
+  if (is.null(number_of_multiple_tests)){
+    number_of_multiple_tests = 2*nrow(all.ld[[1]])
+  }
+
+  ld1 <- all.ld[[1]]
+  ld2 <- all.ld[[2]]
+
+  ## ---- Add conditioning item and direction ----
+  ## ld1: tests Yi ⟂ Yj | R_i
+  ld1$cond_item <- ld1$Item1
+  ld1$direction <- "R_i"
+
+  ## ld2: tests Yi ⟂ Yj | R_j
+  ld2$cond_item <- ld2$Item1
+  ld2$direction <- "R_j"
+
+  ## ---- Step 2: Create unified (long) dataset of hypotheses ----
+  ld1_long <- data.frame(
+    item1 = ld1$Item1,
+    item2 = ld1$Item2,
+    gamma = ld1$gamma,
+    raw_p_val = ld1$pvalue,
+    #p_adj = ld1[,6],
+    cond_item = ld1$cond_item,
+    direction = ld1$direction,
+    stringsAsFactors = FALSE
+  )
+
+  ld2_long <- data.frame(
+    item1 = ld2$Item1,
+    item2 = ld2$Item2,
+    gamma = ld2$gamma,
+    raw_p_val = ld2$pvalue,
+    #p_adj = ld2[,6],
+    cond_item = ld2$cond_item,
+    direction = ld2$direction,
+    stringsAsFactors = FALSE
+  )
+
+  ## Combine both directions
+  ld_long <- rbind(ld1_long, ld2_long)
+  ld_long$adjusted.p <- stats::p.adjust(unlist(ld_long$raw_p_val),
+                                        method = method,
+                                        n = number_of_multiple_tests)
+
+  ## ---- Step 3: Keep only significant hypotheses ----
+  #ld_long <- subset(ld_long, p_adj <= crit_val)
+  ld_long <- subset(ld_long, adjusted.p <= crit_val)
+
+  ## If nothing significant → exit early
+  if (nrow(ld_long) == 0){
+    message("No genuine LD detected")
+    return(invisible(list(
+      genuine_ld = "No genuine LD detected",
+      all_ld_detected = ld_long
+    )))
+  }
+
+  ## ---- Step 4: Create pair id ----
+  ld_long$pair_id <- paste(
+    pmin(ld_long$item1, ld_long$item2),
+    pmax(ld_long$item1, ld_long$item2),
+    sep = "_"
+  )
+
+  ## ---- Step 5: Compute mean gamma per pair ----
+  pair_summary <- aggregate(
+    gamma ~ pair_id,
+    data = ld_long,
+    FUN = function(x) mean(x, na.rm = TRUE)
+  )
+
+  ## Split pair_id back into items
+  pair_summary$item1 <- sub("_.*", "", pair_summary$pair_id)
+  pair_summary$item2 <- sub(".*_", "", pair_summary$pair_id)
+
+  names(pair_summary)[names(pair_summary) == "gamma"] <- "mean_gamma"
+
+  ## ---- Step 6: Working pool ----
+  working_pairs <- pair_summary
+  working_hypotheses <- ld_long
+
+  genuine.ld <- data.frame()
+
+  ## ---- Step 7: Step 3a algorithm ----
+  while (nrow(working_pairs) > 0){
+
+    ## Select strongest LD
+    idx <- which.max(abs(working_pairs$mean_gamma))
+    best_pair <- working_pairs[idx, ]
+
+    genuine.ld <- rbind(genuine.ld, best_pair)
+
+    item_i <- best_pair$item1
+    item_j <- best_pair$item2
+
+    ## ❗ Remove ONLY hypotheses conditioned on Ri or Rj
+    working_hypotheses <- working_hypotheses[
+      !(working_hypotheses$cond_item %in% c(item_i, item_j)),
+    ]
+
+    ## Recompute pair summaries from remaining hypotheses
+    if (nrow(working_hypotheses) == 0) break
+
+    working_pairs <- aggregate(
+      gamma ~ pair_id,
+      data = working_hypotheses,
+      FUN = function(x) mean(x, na.rm = TRUE)
+    )
+
+    working_pairs$item1 <- sub("_.*", "", working_pairs$pair_id)
+    working_pairs$item2 <- sub(".*_", "", working_pairs$pair_id)
+
+    names(working_pairs)[names(working_pairs) == "gamma"] <- "mean_gamma"
+  }
+
+  ## ---- Step 8: Final formatting ----
+  genuine.ld <- genuine.ld[, c("item1", "item2", "mean_gamma")]
+
+  if (nrow(genuine.ld) == 0){
+    genuine.ld <- "No genuine LD detected"
+  }
+
+  results <- list(
+    genuine_ld = genuine.ld,
+    all_ld_detected = pair_summary
+  )
+
+  print(results$genuine_ld)
+  return(invisible(results))
+}

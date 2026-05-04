@@ -4,10 +4,10 @@
 \alias{screen_LD}
 \title{Local Dependence (LD) Identifier.}
 \usage{
-screen_LD(df, items, crit_val = 0.05)
+screen_LD(dataset, items, crit_val = 0.05)
 }
 \arguments{
-\item{df}{A data frame containing item responses and covariates.}
+\item{dataset}{A data frame containing item responses and covariates.}
 
 \item{items}{A character vector of column names corresponding to the items.}
 

@@ -4,10 +4,10 @@
 \alias{screen_DIF}
 \title{Differential item functioning (DIF) identifier}
 \usage{
-screen_DIF(df, items, covariates, crit_val = 0.05)
+screen_DIF(dataset, items, covariates, crit_val = 0.05)
 }
 \arguments{
-\item{df}{A data frame containing item responses and covariates.}
+\item{dataset}{A data frame containing item responses and covariates.}
 
 \item{items}{A character vector of column names corresponding to the items.}
 
@@ -37,7 +37,7 @@ threshold are flagged as exhibiting potential DIF.
 
 The function returns both the full output from \code{iarm::partgam_DIF} and a
 reduced data frame containing only the flagged item–covariate pairs. When called
-directly only the reduced df is printed.
+directly only the reduced data frame is printed.
 
 This function is intended as a screening tool for detecting potential DIF.
 Flagged items should be investigated further using substantive and
