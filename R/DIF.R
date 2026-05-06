@@ -236,42 +236,156 @@ partial_gamma_mc_test <- function(dataset, Yi, Xj,
   ))
 }
 
-#' Conditional Monte Carlo test for DIF using coin
+#' Conditional Monte Carlo test for partial gamma
 #'
-#' @param dataset data.frame
-#' @param Yi item name
-#' @param Xj covariate name
-#' @param strata_vars conditioning variables
-#' @param B Monte Carlo iterations
+#' Performs a conditional independence test using
+#' \code{coin::independence_test} with Monte Carlo approximation of the
+#' conditional null distribution.
 #'
-#' @return list with gamma and p_value
+#' The partial Goodman–Kruskal gamma coefficient is computed separately
+#' using stratified concordant and discordant pair counts.
+#'
+#' Conditioning is implemented by constructing a joint stratification factor
+#' from the variables in \code{strata_vars}.
+#'
+#' Sparse or degenerate strata are automatically removed:
+#' \itemize{
+#'   \item strata with fewer than 2 observations
+#'   \item strata with no variation in \code{Yi}
+#'   \item strata with no variation in \code{Xj}
+#' }
+#'
+#' @param dataset A data.frame containing item responses and covariates.
+#' @param Yi Character string. Name of the item variable.
+#' @param Xj Character string. Name of the covariate variable.
+#' @param strata_vars Character vector containing conditioning variables.
+#' @param B Integer. Number of Monte Carlo samples. Default is \code{10000}.
+#'
+#' @returns A list with:
+#' \describe{
+#'   \item{gamma}{Partial Goodman–Kruskal gamma coefficient.}
+#'   \item{p_value}{Monte Carlo p-value from conditional independence test.}
+#' }
+#'
+#' @details
+#' The p-value is obtained from a conditional Monte Carlo test using
+#' \code{coin::independence_test}. The gamma coefficient is treated as an
+#' effect size measure and is not itself used as the test statistic.
+#'
 #' @keywords internal
+#'
 partial_gamma_coin_test <- function(dataset,
                                     Yi,
                                     Xj,
                                     strata_vars,
                                     B = 10000) {
 
+  ## -----------------------------------------------------------
+  ## Compute partial gamma effect size
+  ## -----------------------------------------------------------
+
   gamma <- compute_partial_gamma(
-    dataset,
-    Yi,
-    Xj,
-    strata_vars
+    dataset = dataset,
+    Yi = Yi,
+    Xj = Xj,
+    strata_vars = strata_vars
   )
 
-  strat_formula <- paste(strata_vars, collapse = " + ")
+  ## -----------------------------------------------------------
+  ## Create joint stratification factor
+  ## -----------------------------------------------------------
+
+  dataset$.strata <- interaction(
+    dataset[, strata_vars, drop = FALSE],
+    drop = TRUE
+  )
+
+  ## -----------------------------------------------------------
+  ## Remove singleton strata
+  ## -----------------------------------------------------------
+
+  strata_tab <- table(dataset$.strata)
+
+  valid_strata <- names(strata_tab[strata_tab >= 2])
+
+  dataset <- dataset[dataset$.strata %in% valid_strata, ]
+
+  dataset$.strata <- droplevels(dataset$.strata)
+
+  ## -----------------------------------------------------------
+  ## Remove strata with no variation in Yi or Xj
+  ## -----------------------------------------------------------
+
+  levels_strata <- levels(dataset$.strata)
+
+  keep <- logical(length(levels_strata))
+
+  for (i in seq_along(levels_strata)) {
+
+    s <- levels_strata[i]
+
+    idx <- dataset$.strata == s
+
+    yi_levels <- length(unique(dataset[idx, Yi]))
+    xj_levels <- length(unique(dataset[idx, Xj]))
+
+    keep[i] <- (yi_levels >= 2) && (xj_levels >= 2)
+  }
+
+  valid_strata <- levels_strata[keep]
+
+  dataset <- dataset[dataset$.strata %in% valid_strata, ]
+
+  dataset$.strata <- droplevels(dataset$.strata)
+
+  ## -----------------------------------------------------------
+  ## Safety exit if no usable strata remain
+  ## -----------------------------------------------------------
+
+  if (nrow(dataset) == 0 || nlevels(dataset$.strata) == 0) {
+
+    return(list(
+      gamma = gamma,
+      p_value = NA_real_
+    ))
+  }
+
+  ## -----------------------------------------------------------
+  ## Coerce variables for coin::independence_test
+  ## -----------------------------------------------------------
+
+  dataset[[Yi]] <- as.ordered(dataset[[Yi]])
+  dataset[[Xj]] <- as.factor(dataset[[Xj]])
+
+  ## -----------------------------------------------------------
+  ## Define conditional independence formula
+  ## -----------------------------------------------------------
 
   form <- stats::as.formula(
-    paste(Yi, "~", Xj, "|", strat_formula)
+    paste(Yi, "~", Xj, "| .strata")
   )
+
+  ## -----------------------------------------------------------
+  ## Monte Carlo conditional independence test
+  ## -----------------------------------------------------------
 
   test <- coin::independence_test(
     form,
     data = dataset,
-    distribution = coin::approximate(B = B)
+    distribution = coin::approximate(
+      nresample = B
+    )
   )
 
+  ## -----------------------------------------------------------
+  ## Extract p-value
+  ## -----------------------------------------------------------
+
   p_value <- coin::pvalue(test)
+
+  ## -----------------------------------------------------------
+  ## Return results
+  ## -----------------------------------------------------------
 
   return(list(
     gamma = gamma,

@@ -2,25 +2,49 @@
 % Please edit documentation in R/DIF.R
 \name{partial_gamma_coin_test}
 \alias{partial_gamma_coin_test}
-\title{Conditional Monte Carlo test for DIF using coin}
+\title{Conditional Monte Carlo test for partial gamma}
 \usage{
 partial_gamma_coin_test(dataset, Yi, Xj, strata_vars, B = 10000)
 }
 \arguments{
-\item{dataset}{data.frame}
+\item{dataset}{A data.frame containing item responses and covariates.}
 
-\item{Yi}{item name}
+\item{Yi}{Character string. Name of the item variable.}
 
-\item{Xj}{covariate name}
+\item{Xj}{Character string. Name of the covariate variable.}
 
-\item{strata_vars}{conditioning variables}
+\item{strata_vars}{Character vector containing conditioning variables.}
 
-\item{B}{Monte Carlo iterations}
+\item{B}{Integer. Number of Monte Carlo samples. Default is \code{10000}.}
 }
 \value{
-list with gamma and p_value
+A list with:
+\describe{
+\item{gamma}{Partial Goodman–Kruskal gamma coefficient.}
+\item{p_value}{Monte Carlo p-value from conditional independence test.}
+}
 }
 \description{
-Conditional Monte Carlo test for DIF using coin
+Performs a conditional independence test using
+\code{coin::independence_test} with Monte Carlo approximation of the
+conditional null distribution.
+}
+\details{
+The partial Goodman–Kruskal gamma coefficient is computed separately
+using stratified concordant and discordant pair counts.
+
+Conditioning is implemented by constructing a joint stratification factor
+from the variables in \code{strata_vars}.
+
+Sparse or degenerate strata are automatically removed:
+\itemize{
+\item strata with fewer than 2 observations
+\item strata with no variation in \code{Yi}
+\item strata with no variation in \code{Xj}
+}
+
+The p-value is obtained from a conditional Monte Carlo test using
+\code{coin::independence_test}. The gamma coefficient is treated as an
+effect size measure and is not itself used as the test statistic.
 }
 \keyword{internal}
