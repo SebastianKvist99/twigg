@@ -146,43 +146,36 @@ s.d_list <- function(screen_DIF_output, items, covariates){
 #' @returns the partial gamma coefficient corrosponding to the test
 #' @keywords internal
 #'
-compute_partial.gam <- function(dataset, Yi, Xj, strata_vars){
+compute_partial_gamma <- function(dataset, Yi, Xj, strata_vars){
 
-  stratas <- interaction(dataset[, strata_vars], drop = TRUE)
-  splits <- split(dataset, strats)
+  stratas <- interaction(dataset[, strata_vars, drop = FALSE], drop = TRUE)
+  splits <- split(dataset, stratas)
 
-  ## sum of concordant and disconcordant pairs
   sum.C <- 0
   sum.D <- 0
 
-  ## ** loop over splits and update sum.C and sum.D
   for (s in splits){
 
-    ## need at least 2 rows in a split
-    if (nrow(s)<2) next
+    if (nrow(s) < 2) next
 
-    ## ** create contingency table
-    con.tab <- table(s[Yi], s[Xj])
+    con.tab <- table(s[[Yi]], s[[Xj]])
 
-    ## ** consitency check again: need at least 2x2 contigency table
-    if (all(dim(con.tab))>1){
+    if (all(dim(con.tab) > 1)) {
+
       loop.res <- DescTools::ConDisPairs(con.tab)
 
-      loop.C <- loop.res$C
-      loop.D <- loop.res$D
-
-      ## ** update sums
-      sum.C <- sum.C + loop.C
-      sum.D <- sum.D + loop.D
+      sum.C <- sum.C + loop.res$C
+      sum.D <- sum.D + loop.res$D
     }
   }
-  if (sum.C+sum.D == 0) return(NA_real_)
-  return(
-    (sum.C-sum.D)/(sum.C+sum.D)
-  )
+
+  if ((sum.C + sum.D) == 0) return(NA_real_)
+
+  return((sum.C - sum.D) / (sum.C + sum.D))
 }
 
-#' Monte Carlo test for partial gamma
+###################### Compute p-values.  ######################
+#' Monte Carlo permutation test for partial gamma
 #'
 #' @param dataset a data frame dataset
 #' @param Yi item name
@@ -193,31 +186,100 @@ compute_partial.gam <- function(dataset, Yi, Xj, strata_vars){
 #' @return list with partial gamma coefficient and corrospondoing p_value obtianed
 #' via the Monte Carlo method.
 #' @keywords internal
-partial_gamma_mc_test <- function(dataset, Yi, Xj, strata_vars, B = 1000) {
+partial_gamma_mc_test <- function(dataset, Yi, Xj,
+                                  strata_vars,
+                                  B = 1000) {
 
-  observed <- compute_partial_gamma(dataset, Yi, Xj, strata_vars)
+  observed <- compute_partial_gamma(
+    dataset,
+    Yi,
+    Xj,
+    strata_vars
+  )
 
-  strata <- interaction(dataset[, strata_vars], drop = TRUE)
+  strata <- interaction(
+    dataset[, strata_vars, drop = FALSE],
+    drop = TRUE
+  )
 
   sim_gamma <- numeric(B)
 
   for (b in seq_len(B)) {
+
     df_sim <- dataset
 
     for (s in levels(strata)) {
+
       idx <- which(strata == s)
+
       if (length(idx) > 1) {
         df_sim[idx, Xj] <- sample(dataset[idx, Xj])
       }
     }
 
-    sim_gamma[b] <- compute_partial_gamma(df_sim, Yi, Xj, strata_vars)
+    sim_gamma[b] <- compute_partial_gamma(
+      df_sim,
+      Yi,
+      Xj,
+      strata_vars
+    )
   }
 
-  p_value <- mean(abs(sim_gamma) >= abs(observed), na.rm = TRUE)
+  p_value <- mean(
+    abs(sim_gamma) >= abs(observed),
+    na.rm = TRUE
+  )
 
-  list(gamma = observed, p_value = p_value)
+  return(list(
+    gamma = observed,
+    p_value = p_value
+  ))
 }
+
+#' Conditional Monte Carlo test for DIF using coin
+#'
+#' @param dataset data.frame
+#' @param Yi item name
+#' @param Xj covariate name
+#' @param strata_vars conditioning variables
+#' @param B Monte Carlo iterations
+#'
+#' @return list with gamma and p_value
+#' @keywords internal
+partial_gamma_coin_test <- function(dataset,
+                                    Yi,
+                                    Xj,
+                                    strata_vars,
+                                    B = 10000) {
+
+  gamma <- compute_partial_gamma(
+    dataset,
+    Yi,
+    Xj,
+    strata_vars
+  )
+
+  strat_formula <- paste(strata_vars, collapse = " + ")
+
+  form <- stats::as.formula(
+    paste(Yi, "~", Xj, "|", strat_formula)
+  )
+
+  test <- coin::independence_test(
+    form,
+    data = dataset,
+    distribution = coin::approximate(B = B)
+  )
+
+  p_value <- coin::pvalue(test)
+
+  return(list(
+    gamma = gamma,
+    p_value = p_value
+  ))
+}
+
+######### ----------- ###########
 
 
 #' Step 3(b): eliminate spurious DIF sources for one item
@@ -247,7 +309,7 @@ step3b_eliminate_sources <- function(dataset, Yi, source_set,
 
       cond_vars <- c("Score", setdiff(current_sources, Xj))
 
-      test <- partial_gamma_mc_test(
+      test <- partial_gamma_coin_test(
         dataset, Yi, Xj,
         strata_vars = cond_vars,
         B = B
@@ -263,10 +325,10 @@ step3b_eliminate_sources <- function(dataset, Yi, source_set,
     if (!iterative || identical(old_sources, current_sources)) break
   }
 
-  list(
+  return(list(
     remaining_sources = current_sources,
     tests = results
-  )
+  ))
 }
 
 
@@ -283,17 +345,25 @@ step3b_eliminate_sources <- function(dataset, Yi, source_set,
 run_step3b <- function(dataset, source_list, items,
                        B = 1000, crit_val = 0.05) {
   ## compute total score variabel
-  dataset$Score <- compute_total_score(dataset[items])
+  # dataset$Score <- compute_total_score(dataset[items])
 
   out <- vector("list", length(source_list))
   names(out) <- names(source_list)
 
   for (Yi in names(source_list)) {
+    ## ---- handle cases where "$SOURCE$item == character(0)"
+    if (length(source_list[[Yi]]) == 0) {
+      out[[Yi]] <- list(
+        remaining_sources = character(0),
+        tests = list()
+      )
+      next
+    }
     out[[Yi]] <- step3b_eliminate_sources(
       dataset = dataset,
       Yi = Yi,
       source_set = source_list[[Yi]],
-      score_var = "Score",
+      items = items,
       B = B,
       crit_val = crit_val
     )
@@ -302,6 +372,141 @@ run_step3b <- function(dataset, source_list, items,
   return(out)
 }
 
+
+
+#### ---- 3.c ---- ####
+#' Step 3(c): eliminate spurious DIF items for one covariate
+#'
+#' @param dataset data.frame
+#' @param Xj covariate name
+#' @param dif_set candidate items showing DIF relative to Xj
+#' @param items character vector of all item names
+#' @param B number of Monte Carlo samples
+#' @param crit_val significance level
+#'
+#' @return list with remaining_dif_items and test results
+#' @keywords internal
+step3c_eliminate_dif_items <- function(dataset, Xj, dif_set,
+                                       items,
+                                       B = 1000, crit_val = 0.05) {
+  dataset$Score <- compute_total_score(dataset[items])
+  current_dif <- dif_set
+  results <- list()
+
+  repeat {
+    old_dif <- current_dif
+
+    for (Yi in current_dif) {
+      # Condition on S and other DIF items (not Yi)
+      cond_vars <- c("Score", setdiff(current_dif, Yi))
+
+      test <- partial_gamma_coin_test(
+        dataset, Yi, Xj,
+        strata_vars = cond_vars,
+        B = B
+      )
+
+      results[[Yi]] <- test
+
+      if (!is.na(test$p_value) && test$p_value > crit_val) {
+        current_dif <- setdiff(current_dif, Yi)
+      }
+    }
+
+    if (identical(old_dif, current_dif)) break
+  }
+
+  return(list(
+    remaining_dif_items = current_dif,
+    tests = results
+  ))
+}
+
+#' Apply Step 3(c) to all covariates
+#'
+#' @param dataset data.frame
+#' @param dif_list named list of DIF(X_j)
+#' @param items character vector of all item names
+#' @param B number of Monte Carlo samples
+#' @param crit_val significance level
+#'
+#' @return list of results per covariate
+#' @export
+run_step3c <- function(dataset, dif_list, items,
+                       B = 1000, crit_val = 0.05) {
+  dataset$Score <- compute_total_score(dataset[items])
+
+  out <- vector("list", length(dif_list))
+  names(out) <- names(dif_list)
+
+  for (Xj in names(dif_list)) {
+    if (length(dif_list[[Xj]]) == 0) {
+      out[[Xj]] <- list(
+        remaining_dif_items = character(0),
+        tests = list()
+      )
+      next
+    }
+    out[[Xj]] <- step3c_eliminate_dif_items(
+      dataset = dataset,
+      Xj = Xj,
+      dif_set = dif_list[[Xj]],
+      items = items,
+      B = B,
+      crit_val = crit_val
+    )
+  }
+
+  return(out)
+}
+
+
+#### ---- Combine the two final functions into one ---- ####
+#' Combine Step 3(b) and 3(c) results
+#'
+#' @param step3b_results output from run_step3b
+#' @param step3c_results output from run_step3c
+#' @param original_source_list original SOURCE list from s.d_list
+#' @param original_dif_list original DIF list from s.d_list
+#'
+#' @return updated SOURCE and DIF lists
+#' @export
+combine_step3bc <- function(step3b_results, step3c_results,
+                            original_source_list, original_dif_list) {
+
+  # Get pairs surviving 3(b): for each item, which sources remain
+  pairs_3b <- list()
+  for (Yi in names(step3b_results)) {
+    for (Xj in step3b_results[[Yi]]$remaining_sources) {
+      pairs_3b[[paste(Yi, Xj, sep = ":")]] <- c(Yi, Xj)
+    }
+  }
+
+  # Get pairs surviving 3(c): for each covariate, which items remain
+  pairs_3c <- list()
+  for (Xj in names(step3c_results)) {
+    for (Yi in step3c_results[[Xj]]$remaining_dif_items) {
+      pairs_3c[[paste(Yi, Xj, sep = ":")]] <- c(Yi, Xj)
+    }
+  }
+
+  # Intersection: pairs that survive both
+  surviving_pairs <- intersect(names(pairs_3b), names(pairs_3c))
+
+  # Rebuild SOURCE and DIF lists
+  new_source <- lapply(original_source_list, function(x) character(0))
+  new_dif <- lapply(original_dif_list, function(x) character(0))
+
+  for (pair_name in surviving_pairs) {
+    parts <- strsplit(pair_name, ":")[[1]]
+    Yi <- parts[1]
+    Xj <- parts[2]
+    new_source[[Yi]] <- c(new_source[[Yi]], Xj)
+    new_dif[[Xj]] <- c(new_dif[[Xj]], Yi)
+  }
+
+  return(list(SOURCE = new_source, DIF = new_dif))
+}
 
 
 

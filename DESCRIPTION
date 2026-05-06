@@ -19,7 +19,8 @@ BugReports: https://github.com/SebastianKvist99/twigg/issues
 Imports: 
     stats,
     DescTools,
-    iarm
+    iarm,
+    coin
 Depends: 
     R (>= 3.5)
 LazyData: true

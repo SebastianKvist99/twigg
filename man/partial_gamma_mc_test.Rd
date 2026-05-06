@@ -2,7 +2,7 @@
 % Please edit documentation in R/DIF.R
 \name{partial_gamma_mc_test}
 \alias{partial_gamma_mc_test}
-\title{Monte Carlo test for partial gamma}
+\title{Monte Carlo permutation test for partial gamma}
 \usage{
 partial_gamma_mc_test(dataset, Yi, Xj, strata_vars, B = 1000)
 }
@@ -22,6 +22,6 @@ list with partial gamma coefficient and corrospondoing p_value obtianed
 via the Monte Carlo method.
 }
 \description{
-Monte Carlo test for partial gamma
+Monte Carlo permutation test for partial gamma
 }
 \keyword{internal}
