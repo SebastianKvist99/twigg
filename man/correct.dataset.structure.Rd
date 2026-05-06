@@ -7,7 +7,10 @@
 correct.dataset.structure(dataset)
 }
 \arguments{
-\item{dataset}{}
+\item{dataset}{a dataset, which can be a matrix, data frame of tibble like structure.}
+}
+\value{
+the dataset but as a data frame instead of whatever class it was origional
 }
 \description{
 convert data set to correct data type

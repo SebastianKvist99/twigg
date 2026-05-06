@@ -74,12 +74,11 @@ are_items_numeric <- function(df, items){
 
 #' convert data set to correct data type
 #'
-#' @param dataset
+#' @param dataset a dataset, which can be a matrix, data frame of tibble like structure.
 #'
-#' @returns
+#' @returns the dataset but as a data frame instead of whatever class it was origional
 #' @export
 #'
-#' @examples
 correct.dataset.structure <- function(dataset){
   if (!(class(dataset) == "data.frame")){
     correct.data <- as.data.frame(dataset)

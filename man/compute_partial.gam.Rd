@@ -2,13 +2,24 @@
 % Please edit documentation in R/DIF.R
 \name{compute_partial.gam}
 \alias{compute_partial.gam}
-\title{Title}
+\title{Partial gamma coefficient}
 \usage{
 compute_partial.gam(dataset, Yi, Xj, strata_vars)
 }
 \arguments{
-\item{strata_vars}{}
+\item{dataset}{A data frame containng the data set}
+
+\item{Yi}{The item in question for the hypothesis}
+
+\item{Xj}{The vocaraite in question for the hypothesis}
+
+\item{strata_vars}{the variables we want to condition on and hence stratify with
+respect to}
+}
+\value{
+the partial gamma coefficient corrosponding to the test
 }
 \description{
-Title
+Partial gamma coefficient
 }
+\keyword{internal}

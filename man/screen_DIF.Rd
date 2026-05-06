@@ -4,7 +4,14 @@
 \alias{screen_DIF}
 \title{Differential item functioning (DIF) identifier}
 \usage{
-screen_DIF(dataset, items, covariates, crit_val = 0.05)
+screen_DIF(
+  dataset,
+  items,
+  covariates,
+  crit_val = 0.05,
+  number_of_multiple_tests = NULL,
+  method = "BH"
+)
 }
 \arguments{
 \item{dataset}{A data frame containing item responses and covariates.}
@@ -16,6 +23,19 @@ covariates to be tested for DIF.}
 
 \item{crit_val}{Numeric. Significance threshold for the adjusted p-values.
 Default is set to \code{0.05}.}
+
+\item{number_of_multiple_tests}{The number of multiple tests performed at once. Must
+be at least equal to the number of LD tests performed in the screen LD function. I.e. if we let
+\eqn{k} denote the number of items and \eqn{l} the number of covaraites we
+are testing for differential item functioning, \code{number_of_multiple_tests}
+must be at least \eqn{k*l}. Default is \code{NULL}, and the function itself
+determines \eqn{k} and \eqn{l} from the the inputs. Only change this parameter
+if you know what you are doing.}
+
+\item{method}{method The correction method used to adjust the p-values to
+control the false discovery rate. Default is set to \code{"BH"} but can be
+set to any of the following character strings
+\code{"holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"}.}
 }
 \value{
 A list with two elements:

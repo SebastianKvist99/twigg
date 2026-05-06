@@ -19,8 +19,19 @@
 #'   covariates to be tested for DIF.
 #' @param crit_val Numeric. Significance threshold for the adjusted p-values.
 #'   Default is set to \code{0.05}.
+#' @param method method The correction method used to adjust the p-values to
+#'  control the false discovery rate. Default is set to \code{"BH"} but can be
+#'  set to any of the following character strings
+#'  \code{"holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"}.
+#' @param number_of_multiple_tests The number of multiple tests performed at once. Must
+#'  be at least equal to the number of LD tests performed in the screen LD function. I.e. if we let
+#'  \eqn{k} denote the number of items and \eqn{l} the number of covaraites we
+#'  are testing for differential item functioning, \code{number_of_multiple_tests}
+#'  must be at least \eqn{k*l}. Default is \code{NULL}, and the function itself
+#'  determines \eqn{k} and \eqn{l} from the the inputs. Only change this parameter
+#'  if you know what you are doing.
 #'
-#' @return A list with two elements:
+#' @returns A list with two elements:
 #' \describe{
 #'   \item{full_DIF}{The complete output from \code{iarm::partgam_DIF}.}
 #'   \item{reported_DIF}{A data frame containing only item–covariate pairs
@@ -42,7 +53,9 @@
 #'
 #' screen_DIF(data, data_items, covariates)
 #'
-screen_DIF <- function(dataset, items, covariates, crit_val = 0.05 #, p_adj = "BH"
+screen_DIF <- function(dataset, items, covariates, crit_val = 0.05,
+                       number_of_multiple_tests = NULL,
+                       method = "BH"
                 ){
   ## ** Input validation and non-redundancy in dataset
   are_items_numeric(dataset, items)
@@ -50,15 +63,25 @@ screen_DIF <- function(dataset, items, covariates, crit_val = 0.05 #, p_adj = "B
   are_covaraites_in_df(dataset, covariates)
   data <- complete_cases(dataset, 10)
 
-  ## ** use our modified version of iarm::partgam_DIF to determine DIF
+  ## ** Number of multiple tests
+  if (is.null(number_of_multiple_tests)){
+    number_of_multiple_tests <- length(items) * length(covariates)
+  }
+
+  ## ** use our modified version of iarm::partgam_DIF to determine partial gamma
+  ## ** coefficients
   DIF_dataset <- quiet_partgam_DIF(dat.items = data[items],
                               dat.exo = data[covariates],
                               p.adj = "BH")
+  ## ** adjust p-values via determined correction method
+  DIF_dataset$your.adjusted.p <- stats::p.adjust(unlist(DIF_dataset$pvalue),
+                                            method = method,
+                                            n = number_of_multiple_tests)
   ## ** Extract the columns to report
   # DIF.2report <- subset(DIF_dataset, select = c(1,2,3,5,6,7))
 
   ## ** report only item covariate pairs with a critical adjusted p-value
-  DIF.2report <- subset(DIF_dataset, DIF_dataset[, 6] <= crit_val)
+  DIF.2report <- subset(DIF_dataset, DIF_dataset$your.adjusted.p <= crit_val)
   ## ** fix row names
   row.names(DIF.2report) <- NULL
 
@@ -79,8 +102,10 @@ screen_DIF <- function(dataset, items, covariates, crit_val = 0.05 #, p_adj = "B
 #'
 #' We take the output from screen_DIF and create two lists, SOURCE and DIF.
 #'
-#' @param reported_DIF The reported_DIF data frame frame from the output of
+#' @param screen_DIF_output The output from screen_DIF data frame frame from the output of
 #' screen_DIF
+#' @param items A charecter vector containing the item names in the data set
+#' @param covariates A charecter vector containing the covaraite names in the data set
 #'
 #' @returns a list of lists
 #' \describe{
@@ -88,39 +113,39 @@ screen_DIF <- function(dataset, items, covariates, crit_val = 0.05 #, p_adj = "B
 #'  \item{DIF}{A list with all the DIF items and the exogenous varibales
 #'  potentially causing it}
 #' }
-#' @internal
+#' @export
 #'
-#' @examples
-S_n_DIF.list <- function(reported_DIF){
-  item.var.dataset <- reported_DIF[,1:2]
-  ## ** create lists
-  source.list <- split(item.var.dataset$Var, item.var.dataset$Item)
-  dif.list <- split(item.var.dataset$Item, item.var.dataset$Var)
+s.d_list <- function(screen_DIF_output, items, covariates){
+  sig <- screen_DIF_output$reported_DIF
 
-  ## ** remove duplicates
-  source.list <- lapply(source.list, base::unique)
-  dif.list <- lapply(dif.list, base::unique)
-  return(
-    list(
-      "SOURCE" = source.list,
-      "DIF" = dif.list
-    )
-  )
+  ## **
+  SOURCE <- stats::setNames(vector("list", length(items)), items)
+  for (i in items){
+    SOURCE[[i]] <- unique(sig$Var[sig$Item == i])
+  }
+
+  DIF <- stats::setNames(vector("list", length(covariates)), covariates)
+  for (j in covariates){
+    DIF[[j]] <- unique(sig$Item[sig$Var == j])
+  }
+
+  return(list(SOURCE = SOURCE,
+              DIF = DIF))
 }
 
 
 
-#' Title
+#' Partial gamma coefficient
 #'
-#' @param dataset
-#' @param Yi
-#' @param Xj
-#' @param strata_vars
+#' @param dataset A data frame containng the data set
+#' @param Yi The item in question for the hypothesis
+#' @param Xj The vocaraite in question for the hypothesis
+#' @param strata_vars the variables we want to condition on and hence stratify with
+#' respect to
 #'
-#' @returns
-#' @export
+#' @returns the partial gamma coefficient corrosponding to the test
+#' @keywords internal
 #'
-#' @examples
 compute_partial.gam <- function(dataset, Yi, Xj, strata_vars){
 
   stratas <- interaction(dataset[, strata_vars], drop = TRUE)
@@ -135,6 +160,8 @@ compute_partial.gam <- function(dataset, Yi, Xj, strata_vars){
 
     ## need at least 2 rows in a split
     if (nrow(s)<2) next
+
+    ## ** create contingency table
     con.tab <- table(s[Yi], s[Xj])
 
     ## ** consitency check again: need at least 2x2 contigency table
@@ -155,96 +182,80 @@ compute_partial.gam <- function(dataset, Yi, Xj, strata_vars){
   )
 }
 
-#' Permutation function for determining p-values from observed partial gamma values.
+#' Monte Carlo test for partial gamma
 #'
-#' Using the Monte Carlo method (is it Mc tho? - how does MC work?)
+#' @param dataset a data frame dataset
+#' @param Yi item name
+#' @param Xj covariate name
+#' @param strata_vars conditioning variables
+#' @param B number of simulations
 #'
-#'
-#'
-#'
-#' @param dataset
-#' @param Yi
-#' @param Xj
-#' @param strata_vars
-#' @param B
-#'
-#' @returns
-#' @export
-#'
-#' @examples
-permutation.test <- function(dataset, Yi, Xj, strata_vars, B = 1000){
-  ## ** compute and store observed partial gamma
-  obs.gam <- compute_partial.gam(dataset, Yi, Xj, strata_vars)
+#' @return list with partial gamma coefficient and corrospondoing p_value obtianed
+#' via the Monte Carlo method.
+#' @keywords internal
+partial_gamma_mc_test <- function(dataset, Yi, Xj, strata_vars, B = 1000) {
 
-  ## ** define stratification levels for the splits
-  stratas <- interaction(dataset[, strata_vars], drop = TRUE)
+  observed <- compute_partial_gamma(dataset, Yi, Xj, strata_vars)
 
-  permuted <- numeric(B)
+  strata <- interaction(dataset[, strata_vars], drop = TRUE)
 
-  for (b in seq_len(B)){
-    dataset_perm <- dataset
+  sim_gamma <- numeric(B)
 
-    # permute within stratas
-    for (s in levels(stratas)) {
-      idx <- which(stratas == s)
+  for (b in seq_len(B)) {
+    df_sim <- dataset
+
+    for (s in levels(strata)) {
+      idx <- which(strata == s)
       if (length(idx) > 1) {
-        dataset_perm[idx, Xj] <- sample(dataset[idx, Xj])
+        df_sim[idx, Xj] <- sample(dataset[idx, Xj])
       }
     }
 
-    permuted[b] <- compute_partial.gam(dataset_perm, Yi, Xj, strata_vars)
+    sim_gamma[b] <- compute_partial_gamma(df_sim, Yi, Xj, strata_vars)
   }
 
-  p_value <- mean(abs(permuted) >= abs(observed), na.rm = TRUE)
+  p_value <- mean(abs(sim_gamma) >= abs(observed), na.rm = TRUE)
 
-  return(list(
-    gamma = obs.gam,
-    p_value = p_value
-  ))
+  list(gamma = observed, p_value = p_value)
 }
 
 
-#' Title
+#' Step 3(b): eliminate spurious DIF sources for one item
 #'
-#' @param dataset
-#' @param Yi
-#' @param source.list
-#' @param all_items
-#' @param B
-#' @param crit_val
-#' @param iterative
+#' @param dataset data.frame
+#' @param Yi item name
+#' @param source_set candidate covariates
+#' @param items a charecter vector with the names of items in the dataset
+#' @param B number of Monte Carlo samples. Default is set to \eqn{1000}.
+#' @param crit_val significance level. Default is set to \eqn{0.05}.
+#' @param iterative logical; repeat until stable
 #'
-#' @returns
-#' @export
-#'
-#' @examples
-step3b_eliminate.sources <- function(dataset, Yi, source.list, all_items,
+#' @return list with remaining_sources and test results
+#' @keywords internal
+step3b_eliminate_sources <- function(dataset, Yi, source_set,
+                                     items,
                                      B = 1000, crit_val = 0.05,
                                      iterative = TRUE) {
-  ## ** compute score (this is the reason we need "all_items" argument)
-  dataset$Score <- rowSums(dataset[all_items])
-
-  current_sources.list <- source.list
+  dataset$Score <- compute_total_score(dataset[items])
+  current_sources <- source_set
   results <- list()
 
   repeat {
-    old_sources <- current_sources.list
+    old_sources <- current_sources
 
-    for (Xj in current_sources.list) {
+    for (Xj in current_sources) {
 
-      cond_vars <- c("Score", setdiff(current_sources.list, Xj))
+      cond_vars <- c("Score", setdiff(current_sources, Xj))
 
-      test <- permutation.test(
-        dataset = dataset,
-        Yi = Yi,
-        Xj = Xj,
+      test <- partial_gamma_mc_test(
+        dataset, Yi, Xj,
         strata_vars = cond_vars,
         B = B
       )
 
       results[[Xj]] <- test
 
-      if (!is.na(test$p_value) && test$p_value > cirt_val) {
+      if (!is.na(test$p_value) && test$p_value > crit_val) {
         current_sources <- setdiff(current_sources, Xj)
       }
     }
@@ -253,78 +264,43 @@ step3b_eliminate.sources <- function(dataset, Yi, source.list, all_items,
   }
 
   list(
-    remaining_sources = current_sources.list,
+    remaining_sources = current_sources,
     tests = results
   )
 }
 
 
-#' Title
+#' Apply Step 3(b) to all items
 #'
-#' @param dataset
-#' @param source.list
-#' @param all_items
-#' @param B
-#' @param crit_val
-#' @param iterative
+#' @param dataset data.frame
+#' @param source_list named list of SOURCE(Y_i)
+#' @param items a charecter vector with the names of items in the dataset
+#' @param B number of Monte Carlo samples. Default is set to \eqn{1000}.
+#' @param crit_val significance level. Default is set to \eqn{0.05}.
 #'
-#' @returns
+#' @return list of results per item
 #' @export
-#'
-#' @examples
-step3b.run <- function(dataset, source.list, all_items,
-                       B = 1000, crit_val = 0.05,
-                       iterative = TRUE) {
+run_step3b <- function(dataset, source_list, items,
+                       B = 1000, crit_val = 0.05) {
+  ## compute total score variabel
+  dataset$Score <- compute_total_score(dataset[items])
 
-  out <- vector("list", length(source.list))
-  names(out) <- names(source.list)
+  out <- vector("list", length(source_list))
+  names(out) <- names(source_list)
 
-  for (Yi in names(source.list)) {
-    out[[Yi]] <- step3b_eliminate.sources(
+  for (Yi in names(source_list)) {
+    out[[Yi]] <- step3b_eliminate_sources(
       dataset = dataset,
       Yi = Yi,
-      source.list = source.list[[Yi]],
-      all_items = all_items,
-      B = 1000,
-      crit_val = 0.05,
-      iterative = TRUE
+      source_set = source_list[[Yi]],
+      score_var = "Score",
+      B = B,
+      crit_val = crit_val
     )
   }
 
   return(out)
 }
-
-
-###################################
-
-#' Elimination of exogenous variables from \eqn{SOURCE(Y_i)}.
-#'
-#' This funciton implements step 3.b of the screening procedure. Here
-#' we perform stepwise elimination of spurious sources of DIF for different items.
-#' This is done by testing hypotheses of the type
-#' \deqn{Y_i \bot X_j \mid S,SOURCE(Y_i)\setminus X_j}. If the hypothesis
-#' is accepted for an exogenous variable \eqn{X_j} then \eqn{X_j\in SOURCE(Y_i)}
-#' is removed.
-#'
-#' @param name description
-#' @param name description
-#'
-#'
-#' @return description
-#'
-#'
-#' @details
-#' Additional details...
-#'
-#' @export
-#'
-#' @examples
-#'
-# source_eliminiation <- function(screen_DIF_output, crit_val = 0.05,
-#                                 p.adjust_method = "BH"){
-#   dif.rep <-
-#
-# }
 
 
 

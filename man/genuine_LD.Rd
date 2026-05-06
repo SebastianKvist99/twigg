@@ -4,34 +4,59 @@
 \alias{genuine_LD}
 \title{Genuine LD Identifier.}
 \usage{
-genuine_LD(screen_LD_output, crit_val = 0.05)
+genuine_LD(
+  screen_LD_output,
+  number_of_multiple_tests = NULL,
+  method = "BH",
+  crit_val = 0.05
+)
 }
 \arguments{
 \item{screen_LD_output}{the output from the screen_LD function.}
 
-\item{crit_val}{The value at which we determine an adjusted pvalue is
-critical}
+\item{number_of_multiple_tests}{The number of multiple tests performed at once. Must
+be at least equal to the number of LD tests performed in the screen LD function. I.e. if we let
+\eqn{k} denote the number of items we are testing for local independence
+\code{number_of_multiple_tests} must be at least \eqn{k^2-k}. Default is \code{NULL},
+and the function itself determines \eqn{k} from the the inputs. Only change this parameter
+if you know what you are doing.}
+
+\item{method}{The correction method used to adjust the p-values to control the
+false discovery rate. Default is set to \code{"BH"} but can be set to any of the
+following character strings \code{"holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"}.}
+
+\item{crit_val}{The value at which we determine an adjusted p-value is significant.}
 }
 \value{
-A list with two data frames both containing LD tests. When called
-directly only the genuine_ld data frame is printed.
+A list with two elements:
 \describe{
-\item{genuine_ld}{The reuslting LD after after deletion of spurious LD}
-\item{all_ld_detected}{All LD, including the spurious. This is the LD data
-frame that we use input to the algorithm and the genuine_ld data frame is
-its output.}
+\item{genuine_ld}{
+A data frame containing the item pairs identified as exhibiting genuine
+local dependence. The columns are:
+\describe{
+\item{item1, item2}{The item pair.}
+\item{gamma_cond_Ri}{Partial gamma for \eqn{Y_i \perp Y_j \mid R_i}.}
+\item{gamma_cond_Rj}{Partial gamma for \eqn{Y_i \perp Y_j \mid R_j}.}
+\item{mean_gamma}{Mean of the two partial gamma coefficients.}
+}
+}
+\item{all_ld_detected}{
+A data frame containing all initially detected LD pairs (before
+elimination of spurious evidence), including both directional gamma
+coefficients and their mean.
+}
 }
 }
 \description{
 This function performs step 3a. of the posed item screening.
-We take the output from the screen_LD function, which flags all LD with a
-significant partial gamma coefficient. On this LD data we compute the mean
-partial gamma coefficient for each pair (i.e. the mean of the partial gamma
-produced by checking the hypothesis \eqn{Y_i \bot Y_j \mid R_i} and
-\eqn{Y_j \bot Y_i \mid R_j}). The highest absolute mean partial gamma coefficient
-is then taken at face value and results obtained by conditioning on either
-\eqn{Y_i} or \eqn{Y_j} are ignored, this procedure is performed literately the
-data frame from screen_LD is empty.
+We take the output from the \code{\link{screen_LD}} function, which flags all
+LD with a significant partial gamma coefficient and perform a step wise
+elimination of spurious LD.
+At each iteration, the item pair with the largest absolute mean
+partial gamma coefficient is selected as exhibiting genuine LD.
+Subsequently, all LD hypotheses conditioned on rest scores involving either
+of the selected items are removed. This procedure is repeated until no
+significant LD hypotheses remain.
 }
 \examples{
 data <- toy_sp_DIF_and_LD
@@ -39,4 +64,9 @@ items <- paste0("pain", 1:5)
 screen_ld_output <- screen_LD(data, items)
 genuine_ld_output <- genuine_LD(screen_ld_output)
 
+}
+\references{
+Kreiner, S., & Christensen, K. B. (2011).
+\emph{Item screening in graphical loglinear Rasch models}.
+Psychometrika, 76(2), 228–256.
 }
