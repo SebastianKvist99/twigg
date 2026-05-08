@@ -147,21 +147,24 @@ s.d_list <- function(screen_DIF_output, items, covariates){
 #' @keywords internal
 #'
 compute_partial_gamma <- function(dataset, Yi, Xj, strata_vars){
-
+  ## ** create stratification factor and split data according to it
   stratas <- interaction(dataset[, strata_vars, drop = FALSE], drop = TRUE)
   splits <- split(dataset, stratas)
-
+  ## ** store the sum of concordant and disconcordant pairs
   sum.C <- 0
   sum.D <- 0
 
+  ## ** loop over splits
   for (s in splits){
+    if (nrow(s) < 2) next # check the data subset contains more than one observation
 
-    if (nrow(s) < 2) next
-
+    ## ** create contigency table for the split according to the (item, covariate) pair we
+    ## want to check for DIF
     con.tab <- table(s[[Yi]], s[[Xj]])
 
+    ## ** Check that our contigency table is at least 2x2, otherwise we cannot determine
+    ## the concordant and dis-concordant pairs within
     if (all(dim(con.tab) > 1)) {
-
       loop.res <- DescTools::ConDisPairs(con.tab)
 
       sum.C <- sum.C + loop.res$C
@@ -175,6 +178,7 @@ compute_partial_gamma <- function(dataset, Yi, Xj, strata_vars){
 }
 
 ###################### Compute p-values.  ######################
+#' --------------- THIS FUNCITON iS NO LONGER BEING USED ------------
 #' Monte Carlo permutation test for partial gamma
 #'
 #' @param dataset a data frame dataset
@@ -186,49 +190,29 @@ compute_partial_gamma <- function(dataset, Yi, Xj, strata_vars){
 #' @return list with partial gamma coefficient and corrospondoing p_value obtianed
 #' via the Monte Carlo method.
 #' @keywords internal
-partial_gamma_mc_test <- function(dataset, Yi, Xj,
-                                  strata_vars,
-                                  B = 1000) {
+partial_gamma_mc_test <- function(dataset, Yi, Xj, strata_vars, B = 1000) {
+  ## ** compute and store observed partial gamma
+  observed <- compute_partial_gamma(dataset, Yi, Xj, strata_vars)
 
-  observed <- compute_partial_gamma(
-    dataset,
-    Yi,
-    Xj,
-    strata_vars
-  )
-
-  strata <- interaction(
-    dataset[, strata_vars, drop = FALSE],
-    drop = TRUE
-  )
-
+  ## ** create stratas based on the strata variables (i.e. conditioning variables)
+  strata <- interaction(dataset[, strata_vars, drop = FALSE], drop = TRUE)
+  ## ** create empty vector for the simulated gammas
   sim_gamma <- numeric(B)
 
+  ## ** MC loop
   for (b in seq_len(B)) {
-
     df_sim <- dataset
 
     for (s in levels(strata)) {
-
       idx <- which(strata == s)
 
       if (length(idx) > 1) {
         df_sim[idx, Xj] <- sample(dataset[idx, Xj])
       }
     }
-
-    sim_gamma[b] <- compute_partial_gamma(
-      df_sim,
-      Yi,
-      Xj,
-      strata_vars
-    )
+    sim_gamma[b] <- compute_partial_gamma(df_sim, Yi, Xj, strata_vars)
   }
-
-  p_value <- mean(
-    abs(sim_gamma) >= abs(observed),
-    na.rm = TRUE
-  )
+  p_value <- mean(abs(sim_gamma) >= abs(observed), na.rm = TRUE)
 
   return(list(
     gamma = observed,
@@ -236,6 +220,7 @@ partial_gamma_mc_test <- function(dataset, Yi, Xj,
   ))
 }
 
+#' --------------- THIS FUNCITON IS THE ONE WE USE RIGHT NOW ------------
 #' Conditional Monte Carlo test for partial gamma
 #'
 #' Performs a conditional independence test using
@@ -274,56 +259,27 @@ partial_gamma_mc_test <- function(dataset, Yi, Xj,
 #'
 #' @keywords internal
 #'
-partial_gamma_coin_test <- function(dataset,
-                                    Yi,
-                                    Xj,
-                                    strata_vars,
-                                    B = 10000) {
+partial_gamma_coin_test <- function(dataset, Yi, Xj, strata_vars, B = 10000) {
+  ## ** Compute observed partial gamma
+  observed_partial.gamma <- compute_partial_gamma(dataset = dataset, Yi = Yi, Xj = Xj,
+    strata_vars = strata_vars)
 
-  ## -----------------------------------------------------------
-  ## Compute partial gamma effect size
-  ## -----------------------------------------------------------
+  ## ** Create factor used for stratification
+  dataset$.strata <- interaction(dataset[, strata_vars, drop = FALSE],
+                                 drop = TRUE)
 
-  gamma <- compute_partial_gamma(
-    dataset = dataset,
-    Yi = Yi,
-    Xj = Xj,
-    strata_vars = strata_vars
-  )
-
-  ## -----------------------------------------------------------
-  ## Create joint stratification factor
-  ## -----------------------------------------------------------
-
-  dataset$.strata <- interaction(
-    dataset[, strata_vars, drop = FALSE],
-    drop = TRUE
-  )
-
-  ## -----------------------------------------------------------
-  ## Remove singleton strata
-  ## -----------------------------------------------------------
-
+  ## ** Remove singleton strata
   strata_tab <- table(dataset$.strata)
-
   valid_strata <- names(strata_tab[strata_tab >= 2])
-
   dataset <- dataset[dataset$.strata %in% valid_strata, ]
-
   dataset$.strata <- droplevels(dataset$.strata)
 
-  ## -----------------------------------------------------------
-  ## Remove strata with no variation in Yi or Xj
-  ## -----------------------------------------------------------
-
+  ## ** Remove strata with no variation in Yi or Xj
   levels_strata <- levels(dataset$.strata)
-
   keep <- logical(length(levels_strata))
 
   for (i in seq_along(levels_strata)) {
-
     s <- levels_strata[i]
-
     idx <- dataset$.strata == s
 
     yi_levels <- length(unique(dataset[idx, Yi]))
@@ -333,62 +289,38 @@ partial_gamma_coin_test <- function(dataset,
   }
 
   valid_strata <- levels_strata[keep]
-
   dataset <- dataset[dataset$.strata %in% valid_strata, ]
 
   dataset$.strata <- droplevels(dataset$.strata)
 
-  ## -----------------------------------------------------------
   ## Safety exit if no usable strata remain
-  ## -----------------------------------------------------------
-
   if (nrow(dataset) == 0 || nlevels(dataset$.strata) == 0) {
-
     return(list(
-      gamma = gamma,
+      gamma = observed_partial.gamma,
       p_value = NA_real_
     ))
   }
 
-  ## -----------------------------------------------------------
-  ## Coerce variables for coin::independence_test
-  ## -----------------------------------------------------------
-
+  ## ** Coerce variables for coin::independence_test
   dataset[[Yi]] <- as.ordered(dataset[[Yi]])
   dataset[[Xj]] <- as.factor(dataset[[Xj]])
 
-  ## -----------------------------------------------------------
-  ## Define conditional independence formula
-  ## -----------------------------------------------------------
+  ## ** Define conditional independence formula
 
-  form <- stats::as.formula(
-    paste(Yi, "~", Xj, "| .strata")
-  )
+  form <- stats::as.formula(paste(Yi, "~", Xj, "| .strata"))
 
-  ## -----------------------------------------------------------
   ## Monte Carlo conditional independence test
-  ## -----------------------------------------------------------
-
-  test <- coin::independence_test(
-    form,
-    data = dataset,
-    distribution = coin::approximate(
-      nresample = B
-    )
+  test <- coin::independence_test(form, data = dataset,
+    ## ** Use dist = coin::approximate() to approximate the null dist via MC method
+    distribution = coin::approximate( nresample = B )
   )
 
-  ## -----------------------------------------------------------
   ## Extract p-value
-  ## -----------------------------------------------------------
-
   p_value <- coin::pvalue(test)
 
-  ## -----------------------------------------------------------
   ## Return results
-  ## -----------------------------------------------------------
-
   return(list(
-    gamma = gamma,
+    gamma = observed_partial.gamma,
     p_value = p_value
   ))
 }
@@ -404,14 +336,12 @@ partial_gamma_coin_test <- function(dataset,
 #' @param items a charecter vector with the names of items in the dataset
 #' @param B number of Monte Carlo samples. Default is set to \eqn{1000}.
 #' @param crit_val significance level. Default is set to \eqn{0.05}.
-#' @param iterative logical; repeat until stable
 #'
 #' @return list with remaining_sources and test results
 #' @keywords internal
 step3b_eliminate_sources <- function(dataset, Yi, source_set,
                                      items,
-                                     B = 1000, crit_val = 0.05,
-                                     iterative = TRUE) {
+                                     B = 1000, crit_val = 0.05) {
   dataset$Score <- compute_total_score(dataset[items])
   current_sources <- source_set
   results <- list()
@@ -423,22 +353,21 @@ step3b_eliminate_sources <- function(dataset, Yi, source_set,
 
       cond_vars <- c("Score", setdiff(current_sources, Xj))
 
-      test <- partial_gamma_coin_test(
-        dataset, Yi, Xj,
-        strata_vars = cond_vars,
-        B = B
-      )
+      test <- partial_gamma_coin_test(dataset, Yi, Xj,
+        strata_vars = cond_vars, B = B)
 
       results[[Xj]] <- test
-
+      ## ** if a p-value is available and it is above the crit_val, drop the
+      ## covaraite from the source list.
       if (!is.na(test$p_value) && test$p_value > crit_val) {
         current_sources <- setdiff(current_sources, Xj)
       }
     }
-
-    if (!iterative || identical(old_sources, current_sources)) break
+    ## old source list and current are identical, no sources are deemed
+    ## indepndent of the item and hence all DIF is as of right now
+    ## determined genuine and we move onto the next item and its sourceses.
+    if (identical(old_sources, current_sources)) break
   }
-
   return(list(
     remaining_sources = current_sources,
     tests = results
@@ -482,8 +411,11 @@ run_step3b <- function(dataset, source_list, items,
       crit_val = crit_val
     )
   }
-
-  return(out)
+  wide.df <- make_source_df(out)
+  results <- list(result.clean = wide.df,
+                  out = out)
+  print(results$result.clean)
+  return(invisible(results))
 }
 
 
@@ -570,8 +502,11 @@ run_step3c <- function(dataset, dif_list, items,
       crit_val = crit_val
     )
   }
-
-  return(out)
+  wide.df <- make_DIF_df(out)
+  results <- list(result.clean = wide.df,
+                  out = out)
+  print(results$result.clean)
+  return(invisible(results))
 }
 
 

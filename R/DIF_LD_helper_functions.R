@@ -130,3 +130,87 @@ quiet_partgam_DIF <- function (dat.items, dat.exo, p.adj = c("BH", "holm", "hoch
   #                  sig = result[, 7], round(result[, 8:9], digits = 4)))
   invisible(result)
 }
+
+
+
+
+
+#' Source list to data frame
+#'
+#' Turn the output from run_step3b into a wide format data frame instead of a
+#' list of lsits
+#'
+#' @param run_step3b.out
+#'
+#' @returns A wide format data frame with overwiev of which DIF is deemed
+#' genuin and which is spurious
+#' @keywords internal
+#'
+make_source_df <- function(run_step3b.out) {
+
+  purrr::imap_dfr(run_step3b.out, function(item, item_name) {
+
+    # Skip if tests is empty
+    if (length(item$tests) == 0) {
+      return(NULL)
+    }
+
+    remaining <- item$remaining_sources
+
+    purrr::imap_dfr(item$tests, function(test_info, var_name) {
+
+      data.frame(
+        item = item_name,
+        DIF_source = var_name,
+        gamma = test_info$gamma,
+        p_value = unname(test_info$p_value[1]),
+        conclusion = ifelse(
+          var_name %in% remaining,
+          "DIF",
+          "Spurious"
+        )
+      )
+    })
+  })
+}
+
+
+
+#' DIF list to data frame
+#'
+#' @param run_step3c.out
+#'
+#' @returns A wide format data frame with overwiev of which DIF is deemed
+#' genuin and which is spurious
+#' @keywords internal
+#'
+make_DIF_df <- function(run_step3c.out) {
+
+  purrr::imap_dfr(run_step3c.out, function(item, item_name) {
+
+    # Skip if tests is empty
+    if (length(item$tests) == 0) {
+      return(NULL)
+    }
+
+    remaining <- item$remaining_dif_items
+
+    purrr::imap_dfr(item$tests, function(test_info, var_name) {
+
+      data.frame(
+        DIF_source = item_name,
+        item = var_name,
+        gamma = test_info$gamma,
+        p_value = unname(test_info$p_value[1]),
+        conclusion = ifelse(
+          var_name %in% remaining,
+          "DIF",
+          "Spurious"
+        )
+      )
+    })
+  })
+}
+
+
+

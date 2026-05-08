@@ -80,7 +80,7 @@ are_items_numeric <- function(df, items){
 #' @export
 #'
 correct.dataset.structure <- function(dataset){
-  if (!(class(dataset) == "data.frame")){
+  if (!(is.data.frame(dataset))){
     correct.data <- as.data.frame(dataset)
   }
 }

@@ -258,7 +258,7 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
     ## Recompute pair summaries from remaining hypotheses
     if (nrow(working_hypotheses) == 0) break
 
-    working_pairs <- reshape(
+    working_pairs <- stats::reshape(
       working_hypotheses[, c("pair_id", "direction", "gamma")],
       idvar = "pair_id",
       timevar = "direction",

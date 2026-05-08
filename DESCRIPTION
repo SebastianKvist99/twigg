@@ -20,7 +20,8 @@ Imports:
     stats,
     DescTools,
     iarm,
-    coin
+    coin,
+    purrr
 Depends: 
     R (>= 3.5)
 LazyData: true
