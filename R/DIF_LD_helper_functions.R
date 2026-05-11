@@ -164,6 +164,7 @@ make_source_df <- function(run_step3b.out) {
         DIF_source = var_name,
         gamma = test_info$gamma,
         p_value = unname(test_info$p_value[1]),
+        conditioned_on = paste(test_info$strata_vars, collapse = " + "),
         conclusion = ifelse(
           var_name %in% remaining,
           "DIF",
@@ -202,6 +203,7 @@ make_DIF_df <- function(run_step3c.out) {
         item = var_name,
         gamma = test_info$gamma,
         p_value = unname(test_info$p_value[1]),
+        conditioned_on = paste(test_info$strata_vars, collapse = " + "),
         conclusion = ifelse(
           var_name %in% remaining,
           "DIF",
@@ -211,6 +213,4 @@ make_DIF_df <- function(run_step3c.out) {
     })
   })
 }
-
-
 

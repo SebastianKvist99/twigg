@@ -178,49 +178,7 @@ compute_partial_gamma <- function(dataset, Yi, Xj, strata_vars){
 }
 
 ###################### Compute p-values.  ######################
-#' --------------- THIS FUNCITON iS NO LONGER BEING USED ------------
-#' Monte Carlo permutation test for partial gamma
-#'
-#' @param dataset a data frame dataset
-#' @param Yi item name
-#' @param Xj covariate name
-#' @param strata_vars conditioning variables
-#' @param B number of simulations
-#'
-#' @return list with partial gamma coefficient and corrospondoing p_value obtianed
-#' via the Monte Carlo method.
-#' @keywords internal
-partial_gamma_mc_test <- function(dataset, Yi, Xj, strata_vars, B = 1000) {
-  ## ** compute and store observed partial gamma
-  observed <- compute_partial_gamma(dataset, Yi, Xj, strata_vars)
-
-  ## ** create stratas based on the strata variables (i.e. conditioning variables)
-  strata <- interaction(dataset[, strata_vars, drop = FALSE], drop = TRUE)
-  ## ** create empty vector for the simulated gammas
-  sim_gamma <- numeric(B)
-
-  ## ** MC loop
-  for (b in seq_len(B)) {
-    df_sim <- dataset
-
-    for (s in levels(strata)) {
-      idx <- which(strata == s)
-
-      if (length(idx) > 1) {
-        df_sim[idx, Xj] <- sample(dataset[idx, Xj])
-      }
-    }
-    sim_gamma[b] <- compute_partial_gamma(df_sim, Yi, Xj, strata_vars)
-  }
-  p_value <- mean(abs(sim_gamma) >= abs(observed), na.rm = TRUE)
-
-  return(list(
-    gamma = observed,
-    p_value = p_value
-  ))
-}
-
-#' --------------- THIS FUNCITON IS THE ONE WE USE RIGHT NOW ------------
+#' --------------- THIS FUNCITON IS THE ONE WE USE NOW ------------
 #' Conditional Monte Carlo test for partial gamma
 #'
 #' Performs a conditional independence test using
@@ -260,6 +218,17 @@ partial_gamma_mc_test <- function(dataset, Yi, Xj, strata_vars, B = 1000) {
 #' @keywords internal
 #'
 partial_gamma_coin_test <- function(dataset, Yi, Xj, strata_vars, B = 10000) {
+  test_vars <- unique(c(Yi, Xj, strata_vars))
+  dataset <- dataset[stats::complete.cases(dataset[, test_vars, drop = FALSE]), ,
+                     drop = FALSE]
+
+  if (nrow(dataset) == 0) {
+    return(list(
+      gamma = NA_real_,
+      p_value = NA_real_
+    ))
+  }
+
   ## ** Compute observed partial gamma
   observed_partial.gamma <- compute_partial_gamma(dataset = dataset, Yi = Yi, Xj = Xj,
     strata_vars = strata_vars)
@@ -291,6 +260,13 @@ partial_gamma_coin_test <- function(dataset, Yi, Xj, strata_vars, B = 10000) {
   valid_strata <- levels_strata[keep]
   dataset <- dataset[dataset$.strata %in% valid_strata, ]
 
+  dataset$.strata <- droplevels(dataset$.strata)
+
+  ## Re-check block sizes after all filtering. coin::independence_test requires
+  ## every block to contain at least two observations.
+  strata_tab <- table(dataset$.strata)
+  valid_strata <- names(strata_tab[strata_tab >= 2])
+  dataset <- dataset[dataset$.strata %in% valid_strata, ]
   dataset$.strata <- droplevels(dataset$.strata)
 
   ## Safety exit if no usable strata remain
@@ -347,26 +323,33 @@ step3b_eliminate_sources <- function(dataset, Yi, source_set,
   results <- list()
 
   repeat {
-    old_sources <- current_sources
+    pass_sources <- current_sources
+    drop_source <- NULL
 
-    for (Xj in current_sources) {
+    for (Xj in pass_sources) {
 
-      cond_vars <- c("Score", setdiff(current_sources, Xj))
+      cond_vars <- c("Score", setdiff(pass_sources, Xj))
 
       test <- partial_gamma_coin_test(dataset, Yi, Xj,
         strata_vars = cond_vars, B = B)
+      test$strata_vars <- cond_vars
 
       results[[Xj]] <- test
       ## ** if a p-value is available and it is above the crit_val, drop the
       ## covaraite from the source list.
-      if (!is.na(test$p_value) && test$p_value > crit_val) {
-        current_sources <- setdiff(current_sources, Xj)
+      if (is.null(drop_source) &&
+          !is.na(test$p_value) && test$p_value > crit_val) {
+        drop_source <- Xj
       }
     }
-    ## old source list and current are identical, no sources are deemed
-    ## indepndent of the item and hence all DIF is as of right now
-    ## determined genuine and we move onto the next item and its sourceses.
-    if (identical(old_sources, current_sources)) break
+
+    ## All tests in a pass use the same source set. Only after the pass is
+    ## complete do we remove one spurious source and retest the remainder.
+    if (is.null(drop_source)) break
+
+    current_sources <- setdiff(current_sources, drop_source)
+
+    if (length(current_sources) == 0) break
   }
   return(list(
     remaining_sources = current_sources,
@@ -418,8 +401,6 @@ run_step3b <- function(dataset, source_list, items,
   return(invisible(results))
 }
 
-
-
 #### ---- 3.c ---- ####
 #' Step 3(c): eliminate spurious DIF items for one covariate
 #'
@@ -440,26 +421,33 @@ step3c_eliminate_dif_items <- function(dataset, Xj, dif_set,
   results <- list()
 
   repeat {
-    old_dif <- current_dif
+    pass_dif <- current_dif
+    drop_dif <- NULL
 
-    for (Yi in current_dif) {
+    for (Yi in pass_dif) {
       # Condition on S and other DIF items (not Yi)
-      cond_vars <- c("Score", setdiff(current_dif, Yi))
+      cond_vars <- c("Score", setdiff(pass_dif, Yi))
 
       test <- partial_gamma_coin_test(
         dataset, Yi, Xj,
         strata_vars = cond_vars,
         B = B
       )
+      test$strata_vars <- cond_vars
 
       results[[Yi]] <- test
 
-      if (!is.na(test$p_value) && test$p_value > crit_val) {
-        current_dif <- setdiff(current_dif, Yi)
+      if (is.null(drop_dif) &&
+          !is.na(test$p_value) && test$p_value > crit_val) {
+        drop_dif <- Yi
       }
     }
 
-    if (identical(old_dif, current_dif)) break
+    if (is.null(drop_dif)) break
+
+    current_dif <- setdiff(current_dif, drop_dif)
+
+    if (length(current_dif) == 0) break
   }
 
   return(list(
@@ -518,10 +506,13 @@ run_step3c <- function(dataset, dif_list, items,
 #' @param original_source_list original SOURCE list from s.d_list
 #' @param original_dif_list original DIF list from s.d_list
 #'
-#' @return updated SOURCE and DIF lists
+#' @return updated SOURCE and DIF lists, plus a table comparing Step 3(b) and
+#' Step 3(c) partial gamma tests
 #' @export
 combine_step3bc <- function(step3b_results, step3c_results,
                             original_source_list, original_dif_list) {
+  if (!is.null(step3b_results$out)) step3b_results <- step3b_results$out
+  if (!is.null(step3c_results$out)) step3c_results <- step3c_results$out
 
   # Get pairs surviving 3(b): for each item, which sources remain
   pairs_3b <- list()
@@ -536,6 +527,20 @@ combine_step3bc <- function(step3b_results, step3c_results,
   for (Xj in names(step3c_results)) {
     for (Yi in step3c_results[[Xj]]$remaining_dif_items) {
       pairs_3c[[paste(Yi, Xj, sep = ":")]] <- c(Yi, Xj)
+    }
+  }
+
+  # Get all original item-source pairs considered in either direction
+  original_pairs <- list()
+  for (Yi in names(original_source_list)) {
+    for (Xj in original_source_list[[Yi]]) {
+      original_pairs[[paste(Yi, Xj, sep = ":")]] <- c(Yi, Xj)
+    }
+  }
+
+  for (Xj in names(original_dif_list)) {
+    for (Yi in original_dif_list[[Xj]]) {
+      original_pairs[[paste(Yi, Xj, sep = ":")]] <- c(Yi, Xj)
     }
   }
 
@@ -554,12 +559,50 @@ combine_step3bc <- function(step3b_results, step3c_results,
     new_dif[[Xj]] <- c(new_dif[[Xj]], Yi)
   }
 
-  return(list(SOURCE = new_source, DIF = new_dif))
+  if (length(original_pairs) == 0) {
+    result_table <- data.frame(
+      item = character(0),
+      DIF_source = character(0),
+      gamma_1 = numeric(0),
+      conditioned_on_1 = character(0),
+      p_value_1 = numeric(0),
+      gamma_2 = numeric(0),
+      conditioned_on_2 = character(0),
+      p_value_2 = numeric(0),
+      conclusion = character(0)
+    )
+  } else {
+    result_table <- do.call(rbind, lapply(original_pairs, function(pair) {
+      Yi <- pair[1]
+      Xj <- pair[2]
+      pair_name <- paste(Yi, Xj, sep = ":")
+
+      test_3b <- step3b_results[[Yi]]$tests[[Xj]]
+      test_3c <- step3c_results[[Xj]]$tests[[Yi]]
+
+      data.frame(
+        item = Yi,
+        DIF_source = Xj,
+        gamma_1 = if (is.null(test_3b)) NA_real_ else test_3b$gamma,
+        conditioned_on_1 = if (is.null(test_3b)) NA_character_ else
+          paste(test_3b$strata_vars, collapse = " + "),
+        p_value_1 = if (is.null(test_3b)) NA_real_ else
+          unname(test_3b$p_value[1]),
+        gamma_2 = if (is.null(test_3c)) NA_real_ else test_3c$gamma,
+        conditioned_on_2 = if (is.null(test_3c)) NA_character_ else
+          paste(test_3c$strata_vars, collapse = " + "),
+        p_value_2 = if (is.null(test_3c)) NA_real_ else
+          unname(test_3c$p_value[1]),
+        conclusion = ifelse(pair_name %in% surviving_pairs, "DIF", "Spurious")
+      )
+    }))
+
+    row.names(result_table) <- NULL
+  }
+
+  print(result_table)
+
+  return(list(SOURCE = new_source, DIF = new_dif, table = result_table))
 }
-
-
-
-
-
 
 

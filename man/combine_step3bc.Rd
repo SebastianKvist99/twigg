@@ -21,7 +21,8 @@ combine_step3bc(
 \item{original_dif_list}{original DIF list from s.d_list}
 }
 \value{
-updated SOURCE and DIF lists
+updated SOURCE and DIF lists, plus a table comparing Step 3(b) and
+Step 3(c) partial gamma tests
 }
 \description{
 Combine Step 3(b) and 3(c) results

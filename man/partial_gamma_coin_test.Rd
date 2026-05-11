@@ -2,7 +2,7 @@
 % Please edit documentation in R/DIF.R
 \name{partial_gamma_coin_test}
 \alias{partial_gamma_coin_test}
-\title{--------------- THIS FUNCITON IS THE ONE WE USE RIGHT NOW ------------
+\title{--------------- THIS FUNCITON IS THE ONE WE USE NOW ------------
 Conditional Monte Carlo test for partial gamma}
 \usage{
 partial_gamma_coin_test(dataset, Yi, Xj, strata_vars, B = 10000)
