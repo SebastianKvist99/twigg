@@ -15,3 +15,4 @@ the dataset but as a data frame instead of whatever class it was origional
 \description{
 convert data set to correct data type
 }
+\keyword{internal}

@@ -324,7 +324,8 @@ step3b_eliminate_sources <- function(dataset, Yi, source_set,
 
   repeat {
     pass_sources <- current_sources
-    drop_source <- NULL
+    pass_p_values <- stats::setNames(rep(NA_real_, length(pass_sources)),
+                                     pass_sources)
 
     for (Xj in pass_sources) {
 
@@ -335,17 +336,17 @@ step3b_eliminate_sources <- function(dataset, Yi, source_set,
       test$strata_vars <- cond_vars
 
       results[[Xj]] <- test
-      ## ** if a p-value is available and it is above the crit_val, drop the
-      ## covaraite from the source list.
-      if (is.null(drop_source) &&
-          !is.na(test$p_value) && test$p_value > crit_val) {
-        drop_source <- Xj
-      }
+      pass_p_values[Xj] <- unname(test$p_value[1])
     }
 
     ## All tests in a pass use the same source set. Only after the pass is
-    ## complete do we remove one spurious source and retest the remainder.
-    if (is.null(drop_source)) break
+    ## complete do we remove the least significant spurious source and retest
+    ## the remainder.
+    removable <- pass_p_values[!is.na(pass_p_values) &
+                                 pass_p_values > crit_val]
+    if (length(removable) == 0) break
+
+    drop_source <- names(removable)[which.max(removable)]
 
     current_sources <- setdiff(current_sources, drop_source)
 
@@ -422,7 +423,8 @@ step3c_eliminate_dif_items <- function(dataset, Xj, dif_set,
 
   repeat {
     pass_dif <- current_dif
-    drop_dif <- NULL
+    pass_p_values <- stats::setNames(rep(NA_real_, length(pass_dif)),
+                                     pass_dif)
 
     for (Yi in pass_dif) {
       # Condition on S and other DIF items (not Yi)
@@ -437,13 +439,14 @@ step3c_eliminate_dif_items <- function(dataset, Xj, dif_set,
 
       results[[Yi]] <- test
 
-      if (is.null(drop_dif) &&
-          !is.na(test$p_value) && test$p_value > crit_val) {
-        drop_dif <- Yi
-      }
+      pass_p_values[Yi] <- unname(test$p_value[1])
     }
 
-    if (is.null(drop_dif)) break
+    removable <- pass_p_values[!is.na(pass_p_values) &
+                                 pass_p_values > crit_val]
+    if (length(removable) == 0) break
+
+    drop_dif <- names(removable)[which.max(removable)]
 
     current_dif <- setdiff(current_dif, drop_dif)
 
@@ -604,5 +607,4 @@ combine_step3bc <- function(step3b_results, step3c_results,
 
   return(list(SOURCE = new_source, DIF = new_dif, table = result_table))
 }
-
 

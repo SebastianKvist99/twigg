@@ -54,9 +54,9 @@ LD with a significant partial gamma coefficient and perform a step wise
 elimination of spurious LD.
 At each iteration, the item pair with the largest absolute mean
 partial gamma coefficient is selected as exhibiting genuine LD.
-Subsequently, all LD hypotheses conditioned on rest scores involving either
-of the selected items are removed. This procedure is repeated until no
-significant LD hypotheses remain.
+Subsequently, all LD hypotheses conditioned on rest scores defined by either
+of the selected items, exhibiting the strongest signal for LD, are removed.
+This procedure is repeated until no significant LD hypotheses remain.
 }
 \examples{
 data <- toy_sp_DIF_and_LD

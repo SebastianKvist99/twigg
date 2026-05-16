@@ -40,7 +40,7 @@ test_that("step3b tests a full source pass before dropping sources", {
   expect_equal(calls[[5]]$strata_vars, c("Score", "Sex"))
 })
 
-test_that("step3b drops one source at a time before retesting", {
+test_that("step3b drops the source with the highest nonsignificant p-value", {
 
   dataset <- data.frame(
     item1 = c(0, 1, 0, 1),
@@ -56,11 +56,14 @@ test_that("step3b drops one source at a time before retesting", {
     partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars, B) {
       calls[[length(calls) + 1]] <<- list(Xj = Xj, strata_vars = strata_vars)
 
-      bmi_is_spurious <- Xj == "BMI" && "SRH" %in% strata_vars
-
       list(
         gamma = 0,
-        p_value = if (Xj == "SRH" || bmi_is_spurious) 0.50 else 0.01
+        p_value = switch(
+          Xj,
+          SRH = 0.10,
+          BMI = 0.50,
+          Sex = 0.01
+        )
       )
     },
     .package = "twigg"
@@ -69,19 +72,20 @@ test_that("step3b drops one source at a time before retesting", {
   out <- step3b_eliminate_sources(
     dataset = dataset,
     Yi = "item1",
-    source_set = c("SRH", "BMI", "Sex"),
+    source_set = c("SRH", "Sex", "BMI"),
     items = c("item1", "item2"),
     crit_val = 0.05
   )
 
-  expect_equal(out$remaining_sources, c("BMI", "Sex"))
+  expect_equal(out$remaining_sources, "Sex")
   expect_equal(vapply(calls, `[[`, character(1), "Xj"),
-               c("SRH", "BMI", "Sex", "BMI", "Sex"))
+               c("SRH", "Sex", "BMI", "SRH", "Sex", "Sex"))
   expect_equal(calls[[4]]$strata_vars, c("Score", "Sex"))
-  expect_equal(calls[[5]]$strata_vars, c("Score", "BMI"))
+  expect_equal(calls[[5]]$strata_vars, c("Score", "SRH"))
+  expect_equal(calls[[6]]$strata_vars, "Score")
 })
 
-test_that("step3c drops one DIF item at a time before retesting", {
+test_that("step3c drops the DIF item with the highest nonsignificant p-value", {
 
   dataset <- data.frame(
     item1 = c(0, 1, 0, 1),
@@ -97,11 +101,14 @@ test_that("step3c drops one DIF item at a time before retesting", {
     partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars, B) {
       calls[[length(calls) + 1]] <<- list(Yi = Yi, strata_vars = strata_vars)
 
-      item2_is_spurious <- Yi == "item2" && "item1" %in% strata_vars
-
       list(
         gamma = 0,
-        p_value = if (Yi == "item1" || item2_is_spurious) 0.50 else 0.01
+        p_value = switch(
+          Yi,
+          item1 = 0.10,
+          item2 = 0.50,
+          item3 = 0.01
+        )
       )
     },
     .package = "twigg"
@@ -115,12 +122,13 @@ test_that("step3c drops one DIF item at a time before retesting", {
     crit_val = 0.05
   )
 
-  expect_equal(out$remaining_dif_items, c("item2", "item3"))
+  expect_equal(out$remaining_dif_items, "item3")
   expect_equal(vapply(calls, `[[`, character(1), "Yi"),
-               c("item1", "item2", "item3", "item2", "item3"))
+               c("item1", "item2", "item3", "item1", "item3", "item3"))
   expect_equal(calls[[4]]$strata_vars, c("Score", "item3"))
-  expect_equal(calls[[5]]$strata_vars, c("Score", "item2"))
-  expect_equal(out$tests$item2$strata_vars, c("Score", "item3"))
+  expect_equal(calls[[5]]$strata_vars, c("Score", "item1"))
+  expect_equal(calls[[6]]$strata_vars, "Score")
+  expect_equal(out$tests$item3$strata_vars, "Score")
 })
 
 test_that("combine_step3bc returns transparent comparison table", {

@@ -77,7 +77,7 @@ are_items_numeric <- function(df, items){
 #' @param dataset a dataset, which can be a matrix, data frame of tibble like structure.
 #'
 #' @returns the dataset but as a data frame instead of whatever class it was origional
-#' @export
+#' @keywords internal
 #'
 correct.dataset.structure <- function(dataset){
   if (!(is.data.frame(dataset))){
