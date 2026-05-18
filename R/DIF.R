@@ -41,7 +41,10 @@
 #' @details
 #' This function is intended as a screening tool for detecting potential DIF.
 #' Flagged items should be investigated further using substantive and
-#' methodological considerations.
+#' methodological considerations. Missing values are handled separately for
+#' each covariate: each item-covariate test uses cases with complete item
+#' responses and a nonmissing value for the covariate currently being tested.
+#' P-values are then adjusted across all item-covariate tests.
 #'
 #' @export
 #'
@@ -61,7 +64,13 @@ screen_DIF <- function(dataset, items, covariates, crit_val = 0.05,
   are_items_numeric(dataset, items)
   are_items_in_df(dataset, items)
   are_covaraites_in_df(dataset, covariates)
-  data <- complete_cases(dataset, 10)
+  data <- dataset[, unique(c(items, covariates)), drop = FALSE]
+  if (nrow(data[stats::complete.cases(data[items]), , drop = FALSE]) < 10) {
+    stop(
+      "Too few observations in data set to perform meaningful screening",
+      call. = TRUE
+    )
+  }
 
   ## ** Number of multiple tests
   if (is.null(number_of_multiple_tests)){
@@ -142,11 +151,20 @@ s.d_list <- function(screen_DIF_output, items, covariates){
 #' @param Xj The vocaraite in question for the hypothesis
 #' @param strata_vars the variables we want to condition on and hence stratify with
 #' respect to
+#' @param return_stats Logical. If \code{TRUE}, return partial gamma together
+#'   with its asymptotic standard error, confidence limits, and p-value.
 #'
-#' @returns the partial gamma coefficient corrosponding to the test
+#' @returns The partial gamma coefficient corresponding to the test. If
+#'   \code{return_stats = TRUE}, returns a list with partial gamma, standard
+#'   error, confidence limits, and asymptotic p-value.
 #' @keywords internal
 #'
-compute_partial_gamma <- function(dataset, Yi, Xj, strata_vars){
+compute_partial_gamma <- function(dataset, Yi, Xj, strata_vars,
+                                  return_stats = FALSE){
+  if (isTRUE(return_stats)) {
+    return(compute_partial_gamma_stats(dataset, Yi, Xj, strata_vars))
+  }
+
   ## ** create stratification factor and split data according to it
   stratas <- interaction(dataset[, strata_vars, drop = FALSE], drop = TRUE)
   splits <- split(dataset, stratas)
@@ -177,13 +195,77 @@ compute_partial_gamma <- function(dataset, Yi, Xj, strata_vars){
   return((sum.C - sum.D) / (sum.C + sum.D))
 }
 
+#' Partial gamma coefficient and asymptotic standard error
+#'
+#' @param dataset A data frame containing the data set.
+#' @param Yi The item in question for the hypothesis.
+#' @param Xj The covariate in question for the hypothesis.
+#' @param strata_vars Variables defining the conditioning strata.
+#' @param conf.level Confidence level for confidence limits.
+#'
+#' @returns A list with partial gamma, standard error, confidence limits, and
+#'   iarm-style asymptotic p-value.
+#' @keywords internal
+compute_partial_gamma_stats <- function(dataset, Yi, Xj, strata_vars,
+                                        conf.level = 0.95) {
+  test_vars <- unique(c(Yi, Xj, strata_vars))
+  dataset <- dataset[stats::complete.cases(dataset[, test_vars, drop = FALSE]), ,
+                     drop = FALSE]
+
+  if (nrow(dataset) == 0) {
+    return(list(
+      gamma = NA_real_,
+      se = NA_real_,
+      lower = NA_real_,
+      upper = NA_real_,
+      p_value = NA_real_
+    ))
+  }
+
+  strata <- interaction(dataset[, strata_vars, drop = FALSE], drop = TRUE)
+
+  out <- tryCatch(
+    iarm::partgam(dataset[[Yi]], dataset[[Xj]], strata,
+                  conf.level = conf.level),
+    error = function(e) NULL
+  )
+
+  if (is.null(out) || nrow(out) == 0) {
+    return(list(
+      gamma = compute_partial_gamma(dataset, Yi, Xj, strata_vars),
+      se = NA_real_,
+      lower = NA_real_,
+      upper = NA_real_,
+      p_value = NA_real_
+    ))
+  }
+
+  partial <- out[nrow(out), , drop = FALSE]
+  gamma <- unname(partial$gamma)
+  se <- unname(partial$se)
+
+  p_value <- if (is.na(gamma) || is.na(se) || se <= 0) {
+    NA_real_
+  } else {
+    2 * stats::pnorm(abs(gamma / se), lower.tail = FALSE)
+  }
+
+  list(
+    gamma = gamma,
+    se = se,
+    lower = unname(partial$CI1),
+    upper = unname(partial$CI2),
+    p_value = p_value
+  )
+}
+
 ###################### Compute p-values.  ######################
 #' --------------- THIS FUNCITON IS THE ONE WE USE NOW ------------
-#' Conditional Monte Carlo test for partial gamma
+#' Conditional independence test for partial gamma
 #'
 #' Performs a conditional independence test using
-#' \code{coin::independence_test} with Monte Carlo approximation of the
-#' conditional null distribution.
+#' \code{coin::independence_test}. The conditional null distribution can be
+#' approximated by Monte Carlo resampling or by the asymptotic distribution.
 #'
 #' The partial Goodman–Kruskal gamma coefficient is computed separately
 #' using stratified concordant and discordant pair counts.
@@ -203,21 +285,36 @@ compute_partial_gamma <- function(dataset, Yi, Xj, strata_vars){
 #' @param Xj Character string. Name of the covariate variable.
 #' @param strata_vars Character vector containing conditioning variables.
 #' @param B Integer. Number of Monte Carlo samples. Default is \code{10000}.
+#' @param p_value_method Character string. Use \code{"monte_carlo"} for
+#'   \code{coin}'s Monte Carlo approximation, \code{"asymptotic"} for the
+#'   iarm-style normal approximation based on partial gamma and its standard
+#'   error, or \code{"coin_asymptotic"} for \code{coin}'s asymptotic null
+#'   distribution.
 #'
 #' @returns A list with:
 #' \describe{
 #'   \item{gamma}{Partial Goodman–Kruskal gamma coefficient.}
-#'   \item{p_value}{Monte Carlo p-value from conditional independence test.}
+#'   \item{se}{Asymptotic standard error for partial gamma.}
+#'   \item{p_value}{P-value from conditional independence test.}
+#'   \item{p_value_method}{Method used to compute the p-value.}
 #' }
 #'
 #' @details
-#' The p-value is obtained from a conditional Monte Carlo test using
-#' \code{coin::independence_test}. The gamma coefficient is treated as an
-#' effect size measure and is not itself used as the test statistic.
+#' For \code{p_value_method = "asymptotic"}, the p-value is computed as
+#' \code{2 * pnorm(abs(gamma / se), lower.tail = FALSE)}, matching the
+#' convention used by \code{iarm::partgam_DIF}. For \code{"monte_carlo"} and
+#' \code{"coin_asymptotic"}, the p-value is obtained from
+#' \code{coin::independence_test}; in these cases gamma is treated as an effect
+#' size measure and is not itself used as the test statistic.
 #'
 #' @keywords internal
 #'
-partial_gamma_coin_test <- function(dataset, Yi, Xj, strata_vars, B = 10000) {
+partial_gamma_coin_test <- function(dataset, Yi, Xj, strata_vars, B = 10000,
+                                    p_value_method = c("monte_carlo",
+                                                       "asymptotic",
+                                                       "coin_asymptotic")) {
+  p_value_method <- match.arg(p_value_method)
+
   test_vars <- unique(c(Yi, Xj, strata_vars))
   dataset <- dataset[stats::complete.cases(dataset[, test_vars, drop = FALSE]), ,
                      drop = FALSE]
@@ -225,13 +322,32 @@ partial_gamma_coin_test <- function(dataset, Yi, Xj, strata_vars, B = 10000) {
   if (nrow(dataset) == 0) {
     return(list(
       gamma = NA_real_,
-      p_value = NA_real_
+      se = NA_real_,
+      lower = NA_real_,
+      upper = NA_real_,
+      p_value = NA_real_,
+      p_value_method = p_value_method
     ))
   }
 
-  ## ** Compute observed partial gamma
-  observed_partial.gamma <- compute_partial_gamma(dataset = dataset, Yi = Yi, Xj = Xj,
-    strata_vars = strata_vars)
+  ## ** Compute observed partial gamma and iarm-style standard error
+  observed_stats <- compute_partial_gamma_stats(
+    dataset = dataset,
+    Yi = Yi,
+    Xj = Xj,
+    strata_vars = strata_vars
+  )
+
+  if (p_value_method == "asymptotic") {
+    return(list(
+      gamma = observed_stats$gamma,
+      se = observed_stats$se,
+      lower = observed_stats$lower,
+      upper = observed_stats$upper,
+      p_value = observed_stats$p_value,
+      p_value_method = p_value_method
+    ))
+  }
 
   ## ** Create factor used for stratification
   dataset$.strata <- interaction(dataset[, strata_vars, drop = FALSE],
@@ -272,8 +388,12 @@ partial_gamma_coin_test <- function(dataset, Yi, Xj, strata_vars, B = 10000) {
   ## Safety exit if no usable strata remain
   if (nrow(dataset) == 0 || nlevels(dataset$.strata) == 0) {
     return(list(
-      gamma = observed_partial.gamma,
-      p_value = NA_real_
+      gamma = observed_stats$gamma,
+      se = observed_stats$se,
+      lower = observed_stats$lower,
+      upper = observed_stats$upper,
+      p_value = NA_real_,
+      p_value_method = p_value_method
     ))
   }
 
@@ -285,19 +405,27 @@ partial_gamma_coin_test <- function(dataset, Yi, Xj, strata_vars, B = 10000) {
 
   form <- stats::as.formula(paste(Yi, "~", Xj, "| .strata"))
 
-  ## Monte Carlo conditional independence test
+  distribution <- if (p_value_method == "monte_carlo") {
+    coin::approximate(nresample = B)
+  } else {
+    coin::asymptotic()
+  }
+
+  ## Conditional independence test
   test <- coin::independence_test(form, data = dataset,
-    ## ** Use dist = coin::approximate() to approximate the null dist via MC method
-    distribution = coin::approximate( nresample = B )
-  )
+                                  distribution = distribution)
 
   ## Extract p-value
   p_value <- coin::pvalue(test)
 
   ## Return results
   return(list(
-    gamma = observed_partial.gamma,
-    p_value = p_value
+    gamma = observed_stats$gamma,
+    se = observed_stats$se,
+    lower = observed_stats$lower,
+    upper = observed_stats$upper,
+    p_value = p_value,
+    p_value_method = p_value_method
   ))
 }
 
@@ -312,12 +440,18 @@ partial_gamma_coin_test <- function(dataset, Yi, Xj, strata_vars, B = 10000) {
 #' @param items a charecter vector with the names of items in the dataset
 #' @param B number of Monte Carlo samples. Default is set to \eqn{1000}.
 #' @param crit_val significance level. Default is set to \eqn{0.05}.
+#' @param p_value_method Character string. Either \code{"monte_carlo"},
+#'   \code{"asymptotic"}, or \code{"coin_asymptotic"}.
 #'
 #' @return list with remaining_sources and test results
 #' @keywords internal
 step3b_eliminate_sources <- function(dataset, Yi, source_set,
                                      items,
-                                     B = 1000, crit_val = 0.05) {
+                                     B = 1000, crit_val = 0.05,
+                                     p_value_method = c("monte_carlo",
+                                                        "asymptotic",
+                                                        "coin_asymptotic")) {
+  p_value_method <- match.arg(p_value_method)
   dataset$Score <- compute_total_score(dataset[items])
   current_sources <- source_set
   results <- list()
@@ -332,7 +466,7 @@ step3b_eliminate_sources <- function(dataset, Yi, source_set,
       cond_vars <- c("Score", setdiff(pass_sources, Xj))
 
       test <- partial_gamma_coin_test(dataset, Yi, Xj,
-        strata_vars = cond_vars, B = B)
+        strata_vars = cond_vars, B = B, p_value_method = p_value_method)
       test$strata_vars <- cond_vars
 
       results[[Xj]] <- test
@@ -366,11 +500,16 @@ step3b_eliminate_sources <- function(dataset, Yi, source_set,
 #' @param items a charecter vector with the names of items in the dataset
 #' @param B number of Monte Carlo samples. Default is set to \eqn{1000}.
 #' @param crit_val significance level. Default is set to \eqn{0.05}.
+#' @param p_value_method Character string. Either \code{"monte_carlo"},
+#'   \code{"asymptotic"}, or \code{"coin_asymptotic"}.
 #'
 #' @return list of results per item
 #' @export
 run_step3b <- function(dataset, source_list, items,
-                       B = 1000, crit_val = 0.05) {
+                       B = 1000, crit_val = 0.05,
+                       p_value_method = c("monte_carlo", "asymptotic",
+                                          "coin_asymptotic")) {
+  p_value_method <- match.arg(p_value_method)
   ## compute total score variabel
   # dataset$Score <- compute_total_score(dataset[items])
 
@@ -392,7 +531,8 @@ run_step3b <- function(dataset, source_list, items,
       source_set = source_list[[Yi]],
       items = items,
       B = B,
-      crit_val = crit_val
+      crit_val = crit_val,
+      p_value_method = p_value_method
     )
   }
   wide.df <- make_source_df(out)
@@ -411,12 +551,18 @@ run_step3b <- function(dataset, source_list, items,
 #' @param items character vector of all item names
 #' @param B number of Monte Carlo samples
 #' @param crit_val significance level
+#' @param p_value_method Character string. Either \code{"monte_carlo"},
+#'   \code{"asymptotic"}, or \code{"coin_asymptotic"}.
 #'
 #' @return list with remaining_dif_items and test results
 #' @keywords internal
 step3c_eliminate_dif_items <- function(dataset, Xj, dif_set,
                                        items,
-                                       B = 1000, crit_val = 0.05) {
+                                       B = 1000, crit_val = 0.05,
+                                       p_value_method = c("monte_carlo",
+                                                          "asymptotic",
+                                                          "coin_asymptotic")) {
+  p_value_method <- match.arg(p_value_method)
   dataset$Score <- compute_total_score(dataset[items])
   current_dif <- dif_set
   results <- list()
@@ -433,7 +579,8 @@ step3c_eliminate_dif_items <- function(dataset, Xj, dif_set,
       test <- partial_gamma_coin_test(
         dataset, Yi, Xj,
         strata_vars = cond_vars,
-        B = B
+        B = B,
+        p_value_method = p_value_method
       )
       test$strata_vars <- cond_vars
 
@@ -466,11 +613,16 @@ step3c_eliminate_dif_items <- function(dataset, Xj, dif_set,
 #' @param items character vector of all item names
 #' @param B number of Monte Carlo samples
 #' @param crit_val significance level
+#' @param p_value_method Character string. Either \code{"monte_carlo"},
+#'   \code{"asymptotic"}, or \code{"coin_asymptotic"}.
 #'
 #' @return list of results per covariate
 #' @export
 run_step3c <- function(dataset, dif_list, items,
-                       B = 1000, crit_val = 0.05) {
+                       B = 1000, crit_val = 0.05,
+                       p_value_method = c("monte_carlo", "asymptotic",
+                                          "coin_asymptotic")) {
+  p_value_method <- match.arg(p_value_method)
   dataset$Score <- compute_total_score(dataset[items])
 
   out <- vector("list", length(dif_list))
@@ -490,7 +642,8 @@ run_step3c <- function(dataset, dif_list, items,
       dif_set = dif_list[[Xj]],
       items = items,
       B = B,
-      crit_val = crit_val
+      crit_val = crit_val,
+      p_value_method = p_value_method
     )
   }
   wide.df <- make_DIF_df(out)
@@ -607,4 +760,3 @@ combine_step3bc <- function(step3b_results, step3c_results,
 
   return(list(SOURCE = new_source, DIF = new_dif, table = result_table))
 }
-

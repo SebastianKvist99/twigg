@@ -1,3 +1,58 @@
+#' Concordant and discordant pair counts for partial gamma
+#'
+#' @param x First ordinal variable.
+#' @param y Second ordinal variable.
+#' @param z Stratification variable.
+#'
+#' @returns A list with concordant pairs, discordant pairs, their sum, and the
+#'   corresponding partial gamma.
+#'
+#' @keywords internal
+partial_gamma_pair_counts <- function(x, y, z) {
+  dat <- data.frame(x = x, y = y, z = z)
+  dat <- dat[stats::complete.cases(dat), , drop = FALSE]
+
+  if (nrow(dat) == 0) {
+    return(list(
+      concordant = 0,
+      discordant = 0,
+      comparable_pairs = 0,
+      gamma = NA_real_
+    ))
+  }
+
+  strata <- interaction(dat$z, drop = TRUE)
+  splits <- split(dat, strata)
+  concordant <- 0
+  discordant <- 0
+
+  for (s in splits) {
+    if (nrow(s) < 2) next
+
+    con.tab <- table(s$x, s$y)
+
+    if (all(dim(con.tab) > 1)) {
+      pair_counts <- DescTools::ConDisPairs(con.tab)
+      concordant <- concordant + pair_counts$C
+      discordant <- discordant + pair_counts$D
+    }
+  }
+
+  comparable_pairs <- concordant + discordant
+  gamma <- if (comparable_pairs == 0) {
+    NA_real_
+  } else {
+    (concordant - discordant) / comparable_pairs
+  }
+
+  list(
+    concordant = concordant,
+    discordant = discordant,
+    comparable_pairs = comparable_pairs,
+    gamma = gamma
+  )
+}
+
 #' Quiet version of iarm partgam LD function.
 #'
 #' This is the exact function that ships with the iarm package, it is called
@@ -11,12 +66,11 @@
 #' @param p.adj A string of charecters defining the methods to be
 #' used for adjusting p-values
 #'
-#' @returns A list with two data frames containing the partial gamma coefficients, standard errors, p-values,
-#' adjusted p-values, confidence limits for every item pair.
+#' @returns A list with two data frames containing the partial gamma
+#'   coefficients, standard errors, p-values, adjusted p-values, confidence
+#'   limits, and concordant/discordant pair counts for every item pair.
 #'
 #' @keywords internal
-#'
-#'
 quiet_partgam_LD <- function(dat.items,
                              p.adj = c("BH","holm","hochberg","hommel",
                                        "bonferroni","BY","none")) {
@@ -30,6 +84,8 @@ quiet_partgam_LD <- function(dat.items,
                        gamma = double(), se = double(), pvalue = double(),
                        pkorr = double(), sig = character(),
                        lower = double(), upper = double(),
+                       concordant = double(), discordant = double(),
+                       comparable_pairs = double(),
                        stringsAsFactors = FALSE)
 
   result <- list(result, result)
@@ -39,6 +95,9 @@ quiet_partgam_LD <- function(dat.items,
       if (i != j) {
         rest <- score[ok] - dat.items[ok, j]
         mm <- iarm::partgam(dat.items[ok, i], dat.items[ok, j], rest)
+        counts <- partial_gamma_pair_counts(dat.items[ok, i],
+                                            dat.items[ok, j],
+                                            rest)
 
         pvalue <- ifelse(mm[nrow(mm),1] > 0,
                          2 * (1 - stats::pnorm(mm[nrow(mm),1] / mm[nrow(mm),2])),
@@ -53,11 +112,13 @@ quiet_partgam_LD <- function(dat.items,
         if (i < j) {
           result[[1]][nrow(result[[1]]) + 1, ] <-
             c(names(dat.items)[i], names(dat.items)[j],
-              mm[nrow(mm),1:2], pvalue, pkorr, symp, mm[nrow(mm),3:4])
+              mm[nrow(mm),1:2], pvalue, pkorr, symp, mm[nrow(mm),3:4],
+              counts$concordant, counts$discordant, counts$comparable_pairs)
         } else {
           result[[2]][nrow(result[[2]]) + 1, ] <-
             c(names(dat.items)[i], names(dat.items)[j],
-              mm[nrow(mm),1:2], pvalue, pkorr, symp, mm[nrow(mm),3:4])
+              mm[nrow(mm),1:2], pvalue, pkorr, symp, mm[nrow(mm),3:4],
+              counts$concordant, counts$discordant, counts$comparable_pairs)
         }
       }
     }
@@ -80,8 +141,10 @@ quiet_partgam_LD <- function(dat.items,
 #' variables.
 #' @param p.adj The method to be used for adjusting p-values, due to multiple testing
 #'
-#' @returns A data frame with the partial gamma coefficients, standard errors, p-values,
-#' adjusted p-values, confidence limits for every pair of item and exogenous varaible.
+#' @returns A data frame with the partial gamma coefficients, standard errors,
+#' p-values, adjusted p-values, confidence limits for every pair of item and
+#' exogenous varaible. Complete-case filtering is performed separately for each
+#' exogenous variable.
 #'
 #' @keywords internal
 #'
@@ -96,8 +159,8 @@ quiet_partgam_DIF <- function (dat.items, dat.exo, p.adj = c("BH", "holm", "hoch
   if (is.null(names(dat.items)))
     names(dat.items) <- paste("I", 1:dim(dat.items)[2], sep = "")
   padj <- match.arg(p.adj)
-  score <- apply(dat.items, 1, sum, na.rm = T)
-  ok <- stats::complete.cases(cbind(dat.items, dat.exo))
+  ok.items <- stats::complete.cases(dat.items)
+  score <- apply(dat.items, 1, sum, na.rm = TRUE)
   k <- dim(dat.items)[2]
   l <- dim(dat.exo)[2]
   result <- data.frame(Item = character(), Var = character(),
@@ -107,6 +170,7 @@ quiet_partgam_DIF <- function (dat.items, dat.exo, p.adj = c("BH", "holm", "hoch
   z <- 1
   for (i in 1:k) {
     for (j in 1:l) {
+      ok <- ok.items & stats::complete.cases(dat.exo[, j, drop = FALSE])
       mm <- iarm::partgam(dat.items[ok, i], dat.exo[ok, j], score[ok])
       pvalue <- ifelse(mm[dim(mm)[1], 1] > 0, 2 * (1 -
                                                      stats::pnorm(mm[dim(mm)[1], 1]/mm[dim(mm)[1], 2])),
@@ -163,7 +227,13 @@ make_source_df <- function(run_step3b.out) {
         item = item_name,
         DIF_source = var_name,
         gamma = test_info$gamma,
+        se = if (is.null(test_info$se)) NA_real_ else test_info$se,
         p_value = unname(test_info$p_value[1]),
+        p_value_method = if (is.null(test_info$p_value_method)) {
+          NA_character_
+        } else {
+          test_info$p_value_method
+        },
         conditioned_on = paste(test_info$strata_vars, collapse = " + "),
         conclusion = ifelse(
           var_name %in% remaining,
@@ -202,7 +272,13 @@ make_DIF_df <- function(run_step3c.out) {
         DIF_source = item_name,
         item = var_name,
         gamma = test_info$gamma,
+        se = if (is.null(test_info$se)) NA_real_ else test_info$se,
         p_value = unname(test_info$p_value[1]),
+        p_value_method = if (is.null(test_info$p_value_method)) {
+          NA_character_
+        } else {
+          test_info$p_value_method
+        },
         conditioned_on = paste(test_info$strata_vars, collapse = " + "),
         conclusion = ifelse(
           var_name %in% remaining,
@@ -213,4 +289,3 @@ make_DIF_df <- function(run_step3c.out) {
     })
   })
 }
-

@@ -4,7 +4,7 @@
 \alias{compute_partial_gamma}
 \title{Partial gamma coefficient}
 \usage{
-compute_partial_gamma(dataset, Yi, Xj, strata_vars)
+compute_partial_gamma(dataset, Yi, Xj, strata_vars, return_stats = FALSE)
 }
 \arguments{
 \item{dataset}{A data frame containng the data set}
@@ -15,9 +15,14 @@ compute_partial_gamma(dataset, Yi, Xj, strata_vars)
 
 \item{strata_vars}{the variables we want to condition on and hence stratify with
 respect to}
+
+\item{return_stats}{Logical. If \code{TRUE}, return partial gamma together
+with its asymptotic standard error, confidence limits, and p-value.}
 }
 \value{
-the partial gamma coefficient corrosponding to the test
+The partial gamma coefficient corresponding to the test. If
+\code{return_stats = TRUE}, returns a list with partial gamma, standard
+error, confidence limits, and asymptotic p-value.
 }
 \description{
 Partial gamma coefficient

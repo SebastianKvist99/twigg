@@ -4,7 +4,14 @@
 \alias{run_step3c}
 \title{Apply Step 3(c) to all covariates}
 \usage{
-run_step3c(dataset, dif_list, items, B = 1000, crit_val = 0.05)
+run_step3c(
+  dataset,
+  dif_list,
+  items,
+  B = 1000,
+  crit_val = 0.05,
+  p_value_method = c("monte_carlo", "asymptotic", "coin_asymptotic")
+)
 }
 \arguments{
 \item{dataset}{data.frame}
@@ -16,6 +23,9 @@ run_step3c(dataset, dif_list, items, B = 1000, crit_val = 0.05)
 \item{B}{number of Monte Carlo samples}
 
 \item{crit_val}{significance level}
+
+\item{p_value_method}{Character string. Either \code{"monte_carlo"},
+\code{"asymptotic"}, or \code{"coin_asymptotic"}.}
 }
 \value{
 list of results per covariate

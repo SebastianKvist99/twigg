@@ -11,7 +11,8 @@ test_that("step3b tests a full source pass before dropping sources", {
   calls <- list()
 
   local_mocked_bindings(
-    partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars, B) {
+    partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars, B,
+                                       p_value_method = "monte_carlo") {
       calls[[length(calls) + 1]] <<- list(Xj = Xj, strata_vars = strata_vars)
 
       list(
@@ -53,7 +54,8 @@ test_that("step3b drops the source with the highest nonsignificant p-value", {
   calls <- list()
 
   local_mocked_bindings(
-    partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars, B) {
+    partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars, B,
+                                       p_value_method = "monte_carlo") {
       calls[[length(calls) + 1]] <<- list(Xj = Xj, strata_vars = strata_vars)
 
       list(
@@ -98,7 +100,8 @@ test_that("step3c drops the DIF item with the highest nonsignificant p-value", {
   calls <- list()
 
   local_mocked_bindings(
-    partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars, B) {
+    partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars, B,
+                                       p_value_method = "monte_carlo") {
       calls[[length(calls) + 1]] <<- list(Yi = Yi, strata_vars = strata_vars)
 
       list(
@@ -216,5 +219,96 @@ test_that("partial_gamma_coin_test removes incomplete rows before block checks",
     )
   )
 
-  expect_named(out, c("gamma", "p_value"))
+  expect_named(out, c("gamma", "se", "lower", "upper", "p_value",
+                      "p_value_method"))
+})
+
+test_that("screen_DIF complete-case filtering is covariate-specific", {
+
+  dataset <- data.frame(
+    item1 = c(0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0),
+    item2 = c(0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0),
+    exo1 = c(1, 1, 2, 2, 1, 2, 1, 2, 1, 2, 1, 2),
+    exo2 = c(NA, NA, 1, 1, 2, 2, 1, 2, 1, 2, NA, NA)
+  )
+
+  capture.output(out_both <- screen_DIF(
+    dataset, c("item1", "item2"), c("exo1", "exo2"), method = "none"))
+  capture.output(out_one <- screen_DIF(
+    dataset, c("item1", "item2"), "exo1", method = "none"))
+
+  both_exo1 <- out_both$full_DIF[out_both$full_DIF$Var == "exo1",
+                                 c("Item", "Var", "gamma", "pvalue")]
+  one_exo1 <- out_one$full_DIF[, c("Item", "Var", "gamma", "pvalue")]
+
+  row.names(both_exo1) <- NULL
+  row.names(one_exo1) <- NULL
+
+  expect_equal(both_exo1, one_exo1)
+})
+
+test_that("partial_gamma_coin_test can use gamma asymptotic p-values", {
+
+  dataset <- data.frame(
+    item = c(0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1),
+    covariate = c(0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0),
+    strata = rep(c("a", "b", "c"), each = 4)
+  )
+
+  out <- partial_gamma_coin_test(
+    dataset = dataset,
+    Yi = "item",
+    Xj = "covariate",
+    strata_vars = "strata",
+    p_value_method = "asymptotic"
+  )
+
+  expect_named(out, c("gamma", "se", "lower", "upper", "p_value",
+                      "p_value_method"))
+  expect_equal(out$p_value_method, "asymptotic")
+  expect_true(is.numeric(out$p_value))
+  expect_true(is.numeric(out$se))
+  expect_equal(
+    out$p_value,
+    2 * stats::pnorm(abs(out$gamma / out$se), lower.tail = FALSE)
+  )
+})
+
+test_that("compute_partial_gamma can return asymptotic statistics", {
+
+  dataset <- data.frame(
+    item = c(0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1),
+    covariate = c(0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0),
+    strata = rep(c("a", "b", "c"), each = 4)
+  )
+
+  gamma <- compute_partial_gamma(dataset, "item", "covariate", "strata")
+  stats <- compute_partial_gamma(
+    dataset, "item", "covariate", "strata", return_stats = TRUE)
+
+  expect_named(stats, c("gamma", "se", "lower", "upper", "p_value"))
+  expect_equal(stats$gamma, gamma)
+  expect_true(is.numeric(stats$se))
+})
+
+test_that("partial_gamma_coin_test can still use coin asymptotic p-values", {
+
+  dataset <- data.frame(
+    item = c(0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1),
+    covariate = c(0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0),
+    strata = rep(c("a", "b", "c"), each = 4)
+  )
+
+  out <- partial_gamma_coin_test(
+    dataset = dataset,
+    Yi = "item",
+    Xj = "covariate",
+    strata_vars = "strata",
+    p_value_method = "coin_asymptotic"
+  )
+
+  expect_named(out, c("gamma", "se", "lower", "upper", "p_value",
+                      "p_value_method"))
+  expect_equal(out$p_value_method, "coin_asymptotic")
+  expect_true(is.numeric(out$p_value))
 })

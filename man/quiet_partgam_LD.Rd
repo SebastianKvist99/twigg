@@ -16,8 +16,9 @@ quiet_partgam_LD(
 used for adjusting p-values}
 }
 \value{
-A list with two data frames containing the partial gamma coefficients, standard errors, p-values,
-adjusted p-values, confidence limits for every item pair.
+A list with two data frames containing the partial gamma
+coefficients, standard errors, p-values, adjusted p-values, confidence
+limits, and concordant/discordant pair counts for every item pair.
 }
 \description{
 This is the exact function that ships with the iarm package, it is called

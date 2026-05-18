@@ -41,7 +41,9 @@ exhibiting LD.
 
 This function is intended as a screening tool for detecting potential LD.
 Flagged item pairs should be investigated further using substantive and
-methodological considerations.
+methodological considerations. Missing values in non-item variables are
+ignored; LD screening is performed on cases with complete responses to the
+selected item set.
 }
 \examples{
 data <- twigg::toy_sp_DIF_and_LD

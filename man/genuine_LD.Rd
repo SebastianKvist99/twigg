@@ -37,13 +37,23 @@ local dependence. The columns are:
 \item{item1, item2}{The item pair.}
 \item{gamma_cond_Ri}{Partial gamma for \eqn{Y_i \perp Y_j \mid R_i}.}
 \item{gamma_cond_Rj}{Partial gamma for \eqn{Y_i \perp Y_j \mid R_j}.}
-\item{mean_gamma}{Mean of the two partial gamma coefficients.}
+\item{arithmetic_mean_gamma}{Arithmetic mean of the two partial gamma
+coefficients.}
+\item{weighted_partial_gamma}{Weighted mean of the two partial gamma
+coefficients, using the number of concordant and discordant pairs as
+weights.}
 }
 }
 \item{all_ld_detected}{
 A data frame containing all initially detected LD pairs (before
 elimination of spurious evidence), including both directional gamma
-coefficients and their mean.
+coefficients, arithmetic mean, and weighted partial gamma.
+}
+\item{ld_evidence_summary}{
+A list of data frames grouping LD evidence as two significant positive
+partial correlations, one significant positive partial correlation, one
+significant negative partial correlation, and two significant negative
+partial correlations.
 }
 }
 }
@@ -52,8 +62,8 @@ This function performs step 3a. of the posed item screening.
 We take the output from the \code{\link{screen_LD}} function, which flags all
 LD with a significant partial gamma coefficient and perform a step wise
 elimination of spurious LD.
-At each iteration, the item pair with the largest absolute mean
-partial gamma coefficient is selected as exhibiting genuine LD.
+At each iteration, the item pair with the largest absolute weighted partial
+gamma coefficient is selected as exhibiting genuine LD.
 Subsequently, all LD hypotheses conditioned on rest scores defined by either
 of the selected items, exhibiting the strongest signal for LD, are removed.
 This procedure is repeated until no significant LD hypotheses remain.

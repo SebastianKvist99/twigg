@@ -61,7 +61,10 @@ directly only the reduced data frame is printed.
 
 This function is intended as a screening tool for detecting potential DIF.
 Flagged items should be investigated further using substantive and
-methodological considerations.
+methodological considerations. Missing values are handled separately for
+each covariate: each item-covariate test uses cases with complete item
+responses and a nonmissing value for the covariate currently being tested.
+P-values are then adjusted across all item-covariate tests.
 }
 \examples{
 data <- twigg::llraDat1

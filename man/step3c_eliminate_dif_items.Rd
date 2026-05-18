@@ -10,7 +10,8 @@ step3c_eliminate_dif_items(
   dif_set,
   items,
   B = 1000,
-  crit_val = 0.05
+  crit_val = 0.05,
+  p_value_method = c("monte_carlo", "asymptotic", "coin_asymptotic")
 )
 }
 \arguments{
@@ -25,6 +26,9 @@ step3c_eliminate_dif_items(
 \item{B}{number of Monte Carlo samples}
 
 \item{crit_val}{significance level}
+
+\item{p_value_method}{Character string. Either \code{"monte_carlo"},
+\code{"asymptotic"}, or \code{"coin_asymptotic"}.}
 }
 \value{
 list with remaining_dif_items and test results

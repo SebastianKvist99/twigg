@@ -10,7 +10,8 @@ step3b_eliminate_sources(
   source_set,
   items,
   B = 1000,
-  crit_val = 0.05
+  crit_val = 0.05,
+  p_value_method = c("monte_carlo", "asymptotic", "coin_asymptotic")
 )
 }
 \arguments{
@@ -25,6 +26,9 @@ step3b_eliminate_sources(
 \item{B}{number of Monte Carlo samples. Default is set to \eqn{1000}.}
 
 \item{crit_val}{significance level. Default is set to \eqn{0.05}.}
+
+\item{p_value_method}{Character string. Either \code{"monte_carlo"},
+\code{"asymptotic"}, or \code{"coin_asymptotic"}.}
 }
 \value{
 list with remaining_sources and test results

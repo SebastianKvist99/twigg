@@ -3,9 +3,16 @@
 \name{partial_gamma_coin_test}
 \alias{partial_gamma_coin_test}
 \title{--------------- THIS FUNCITON IS THE ONE WE USE NOW ------------
-Conditional Monte Carlo test for partial gamma}
+Conditional independence test for partial gamma}
 \usage{
-partial_gamma_coin_test(dataset, Yi, Xj, strata_vars, B = 10000)
+partial_gamma_coin_test(
+  dataset,
+  Yi,
+  Xj,
+  strata_vars,
+  B = 10000,
+  p_value_method = c("monte_carlo", "asymptotic", "coin_asymptotic")
+)
 }
 \arguments{
 \item{dataset}{A data.frame containing item responses and covariates.}
@@ -17,18 +24,26 @@ partial_gamma_coin_test(dataset, Yi, Xj, strata_vars, B = 10000)
 \item{strata_vars}{Character vector containing conditioning variables.}
 
 \item{B}{Integer. Number of Monte Carlo samples. Default is \code{10000}.}
+
+\item{p_value_method}{Character string. Use \code{"monte_carlo"} for
+\code{coin}'s Monte Carlo approximation, \code{"asymptotic"} for the
+iarm-style normal approximation based on partial gamma and its standard
+error, or \code{"coin_asymptotic"} for \code{coin}'s asymptotic null
+distribution.}
 }
 \value{
 A list with:
 \describe{
 \item{gamma}{Partial Goodman–Kruskal gamma coefficient.}
-\item{p_value}{Monte Carlo p-value from conditional independence test.}
+\item{se}{Asymptotic standard error for partial gamma.}
+\item{p_value}{P-value from conditional independence test.}
+\item{p_value_method}{Method used to compute the p-value.}
 }
 }
 \description{
 Performs a conditional independence test using
-\code{coin::independence_test} with Monte Carlo approximation of the
-conditional null distribution.
+\code{coin::independence_test}. The conditional null distribution can be
+approximated by Monte Carlo resampling or by the asymptotic distribution.
 }
 \details{
 The partial Goodman–Kruskal gamma coefficient is computed separately
@@ -44,8 +59,11 @@ Sparse or degenerate strata are automatically removed:
 \item strata with no variation in \code{Xj}
 }
 
-The p-value is obtained from a conditional Monte Carlo test using
-\code{coin::independence_test}. The gamma coefficient is treated as an
-effect size measure and is not itself used as the test statistic.
+For \code{p_value_method = "asymptotic"}, the p-value is computed as
+\code{2 * pnorm(abs(gamma / se), lower.tail = FALSE)}, matching the
+convention used by \code{iarm::partgam_DIF}. For \code{"monte_carlo"} and
+\code{"coin_asymptotic"}, the p-value is obtained from
+\code{coin::independence_test}; in these cases gamma is treated as an effect
+size measure and is not itself used as the test statistic.
 }
 \keyword{internal}

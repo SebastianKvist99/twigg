@@ -19,8 +19,10 @@ variables.}
 \item{p.adj}{The method to be used for adjusting p-values, due to multiple testing}
 }
 \value{
-A data frame with the partial gamma coefficients, standard errors, p-values,
-adjusted p-values, confidence limits for every pair of item and exogenous varaible.
+A data frame with the partial gamma coefficients, standard errors,
+p-values, adjusted p-values, confidence limits for every pair of item and
+exogenous varaible. Complete-case filtering is performed separately for each
+exogenous variable.
 }
 \description{
 Again we needed a function which does exactly what iarm's partgam_DIF function does
