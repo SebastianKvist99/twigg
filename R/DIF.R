@@ -61,8 +61,9 @@ screen_DIF <- function(dataset, items, covariates, crit_val = 0.05,
                        method = "BH"
                 ){
   ## ** Input validation and non-redundancy in dataset
-  are_items_numeric(dataset, items)
+  dataset <- as_screening_data_frame(dataset)
   are_items_in_df(dataset, items)
+  are_items_numeric(dataset, items)
   are_covaraites_in_df(dataset, covariates)
   data <- dataset[, unique(c(items, covariates)), drop = FALSE]
   if (nrow(data[stats::complete.cases(data[items]), , drop = FALSE]) < 10) {

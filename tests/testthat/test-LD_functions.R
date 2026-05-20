@@ -135,3 +135,39 @@ test_that("screen_LD complete-case filtering uses item columns only", {
   expect_equal(out_full$all_LD[[1]]$gamma, out_items$all_LD[[1]]$gamma)
   expect_equal(out_full$all_LD[[2]]$gamma, out_items$all_LD[[2]]$gamma)
 })
+
+test_that("screen_LD accepts matrix and tibble-like data", {
+  dataset <- data.frame(
+    item1 = c(0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0),
+    item2 = c(0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0)
+  )
+  dataset_tbl <- structure(dataset, class = c("tbl_df", "tbl", "data.frame"))
+  dataset_mat <- as.matrix(dataset)
+
+  capture.output(expect_no_error(
+    screen_LD(dataset_tbl, c("item1", "item2"))
+  ))
+  capture.output(expect_no_error(
+    screen_LD(dataset_mat, c("item1", "item2"))
+  ))
+})
+
+test_that("screen_LD reports meaningful validation errors", {
+  dataset <- data.frame(
+    item1 = c(0, 1, 1, 0, 1, 0, 1, 0, 1, 0),
+    item2 = letters[1:10]
+  )
+
+  expect_error(
+    screen_LD(1:10, c("item1", "item2")),
+    "rectangular object"
+  )
+  expect_error(
+    screen_LD(dataset, c("item1", "item2")),
+    "One or more items are not numerical: item2"
+  )
+  expect_error(
+    screen_LD(dataset, "missing"),
+    "not in the data frame: missing"
+  )
+})

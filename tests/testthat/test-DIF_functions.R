@@ -247,6 +247,46 @@ test_that("screen_DIF complete-case filtering is covariate-specific", {
   expect_equal(both_exo1, one_exo1)
 })
 
+test_that("screen_DIF accepts matrix and tibble-like data", {
+
+  dataset <- data.frame(
+    item1 = c(0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0),
+    item2 = c(0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0),
+    exo = c(1, 1, 2, 2, 1, 2, 1, 2, 1, 2, 1, 2)
+  )
+  dataset_tbl <- structure(dataset, class = c("tbl_df", "tbl", "data.frame"))
+  dataset_mat <- as.matrix(dataset)
+
+  capture.output(expect_no_error(
+    screen_DIF(dataset_tbl, c("item1", "item2"), "exo", method = "none")
+  ))
+  capture.output(expect_no_error(
+    screen_DIF(dataset_mat, c("item1", "item2"), "exo", method = "none")
+  ))
+})
+
+test_that("screen_DIF reports meaningful validation errors", {
+
+  dataset <- data.frame(
+    item1 = c(0, 1, 1, 0, 1, 0, 1, 0, 1, 0),
+    item2 = letters[1:10],
+    exo = c(1, 1, 2, 2, 1, 2, 1, 2, 1, 2)
+  )
+
+  expect_error(
+    screen_DIF(1:10, c("item1", "item2"), "exo"),
+    "rectangular object"
+  )
+  expect_error(
+    screen_DIF(dataset, c("item1", "item2"), "exo"),
+    "One or more items are not numerical: item2"
+  )
+  expect_error(
+    screen_DIF(dataset, c("item1"), "missing"),
+    "not in the data frame: missing"
+  )
+})
+
 test_that("partial_gamma_coin_test can use gamma asymptotic p-values", {
 
   dataset <- data.frame(

@@ -44,8 +44,9 @@
 #' screen_LD(data, data_items)
 screen_LD <- function(dataset, items, crit_val = 0.05){
   ## ** Check input
-  are_items_numeric(dataset, items)
+  dataset <- as_screening_data_frame(dataset)
   are_items_in_df(dataset, items)
+  are_items_numeric(dataset, items)
   data <- complete_cases(dataset[items], 10)
 
 
@@ -227,7 +228,7 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
     sep = "_"
   )
 
-  ld_significant <- subset(ld_long, adjusted.p <= crit_val)
+  ld_significant <- ld_long[ld_long$adjusted.p <= crit_val, , drop = FALSE]
 
   ## If nothing significant → exit early
   if (nrow(ld_significant) == 0){

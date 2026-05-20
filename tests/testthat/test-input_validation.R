@@ -80,7 +80,8 @@ test_that("Test behaviour with all missing data", {
 
 test_that("Non-data-frame input errors", {
   expect_error(
-    complete_cases(1:20, 10)
+    complete_cases(1:20, 10),
+    "rectangular object"
   )
 })
 
@@ -109,6 +110,45 @@ test_that("Are items in df function works well", {
   expect_silent(are_items_in_df(df, right_items))
 })
 
+test_that("as_screening_data_frame accepts rectangular inputs", {
+  mat <- matrix(1:20, ncol = 2)
+  colnames(mat) <- c("item1", "item2")
+
+  out <- as_screening_data_frame(mat)
+
+  expect_s3_class(out, "data.frame")
+  expect_equal(names(out), c("item1", "item2"))
+})
+
+test_that("as_screening_data_frame rejects non-rectangular inputs", {
+  expect_error(
+    as_screening_data_frame(1:10),
+    "rectangular object"
+  )
+})
+
+test_that("as_screening_data_frame requires column names", {
+  mat <- matrix(1:20, ncol = 2)
+
+  expect_error(
+    as_screening_data_frame(mat),
+    "non-empty column names"
+  )
+})
+
+test_that("item and covariate name checks validate argument type", {
+  df <- data.frame(item1 = 1:10, cov1 = 1:10)
+
+  expect_error(
+    are_items_in_df(df, 1),
+    "'items' must be a non-empty character vector"
+  )
+  expect_error(
+    are_covaraites_in_df(df, 1),
+    "'covariates' must be a non-empty character vector"
+  )
+})
+
 test_that("Are covariates in df function works well", {
   df <- toy_spadi_pain
   wrong_covs <- c("height", "weight")
@@ -132,7 +172,6 @@ test_that("Are items numerical function works well", {
                "One or more items are not numerical")
   expect_silent(are_items_numeric(good_df, items))
 })
-
 
 
 
