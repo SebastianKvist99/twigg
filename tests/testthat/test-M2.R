@@ -41,6 +41,19 @@ test_that("M2 is invariant to item order", {
   expect_equal(res1$status, res2$status)
 })
 
+test_that("M2 complete-case filtering uses item columns only", {
+  df <- toy_spadi_pain
+  items <- paste0("pain", 1:5)
+  df$unrelated <- NA_real_
+  df$pain2[1:5] <- NA
+
+  expected <- M2(stats::na.omit(df[items]), items)
+  out <- M2(df, items)
+
+  expect_equal(out$associations, expected$associations)
+  expect_equal(out$status, expected$status)
+})
+
 
 test_that("M2 returns expected structure", {
   df <- toy_spadi_pain
@@ -59,7 +72,6 @@ test_that("M2 should stop if invalid method is passed", {
   expect_error(M2(df, items, method = "invalid"),
                "please input a valid method of associations measure")
 })
-
 
 
 

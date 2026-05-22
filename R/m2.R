@@ -10,6 +10,10 @@
 #' associations scores and a status indicating whether or not we passed the
 #' M2 criteria.
 #'
+#' @details
+#' Missing values are handled using complete cases of the selected item columns.
+#' Missingness in variables not listed in \code{items} does not affect M2.
+#'
 #' @export
 #'
 #' @examples
@@ -25,11 +29,13 @@ M2 <- function(dataset, items, method = "gamma") {
   }
 
   # input validation checks
+  dataset <- as_screening_data_frame(dataset)
   are_items_in_df(dataset, items)
   are_items_numeric(dataset, items)
 
   # extract item matrix
-  X <- as.matrix(dataset[, items, drop = FALSE])
+  data <- complete_cases(dataset[items], 10)
+  X <- as.matrix(data[, items, drop = FALSE])
 
   # compute total score
   total_score <- rowSums(X)
@@ -58,8 +64,6 @@ M2 <- function(dataset, items, method = "gamma") {
               associations = associations,
               status = fulfilled))
 }
-
-
 
 
 

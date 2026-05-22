@@ -11,11 +11,117 @@ test_that("screen_items passes all steps on toy SPADI data", {
 
   expect_s3_class(res, "item_screening")
   expect_true(res$passed)
+  expect_equal(res$failed_steps, character(0))
   expect_null(res$failed_step)
 
   expect_true("M1" %in% names(res))
   expect_true("M2" %in% names(res))
   expect_true("M3" %in% names(res))
+})
+
+## ---------------------------------------- ##
+test_that("screen_items records and prints M3 failures", {
+
+  dataset <- data.frame(
+    item1 = c(0, 1, 0, 1, 0, 1, 0, 1, 0, 1),
+    item2 = c(1, 1, 0, 0, 1, 0, 1, 1, 0, 0),
+    exo = c(0, 0, 1, 1, 0, 1, 0, 0, 1, 1)
+  )
+
+  local_mocked_bindings(
+    M1 = function(dataset, items, method) {
+      list(status = TRUE)
+    },
+    M2 = function(dataset, items, method) {
+      list(status = TRUE)
+    },
+    M3 = function(dataset, items, covariates, corr_method) {
+      list(status = FALSE)
+    },
+    .package = "twigg"
+  )
+
+  res <- screen_items(
+    dataset = dataset,
+    items = c("item1", "item2"),
+    covariates = "exo"
+  )
+
+  expect_false(res$passed)
+  expect_equal(res$failed_steps, "M3")
+  expect_equal(res$failed_step, "M3")
+  expect_output(print(res), "Failed steps: M3")
+})
+
+## ---------------------------------------- ##
+test_that("screen_items records multiple failed steps", {
+
+  dataset <- data.frame(
+    item1 = c(0, 1, 0, 1, 0, 1, 0, 1, 0, 1),
+    item2 = c(1, 1, 0, 0, 1, 0, 1, 1, 0, 0),
+    exo = c(0, 0, 1, 1, 0, 1, 0, 0, 1, 1)
+  )
+
+  local_mocked_bindings(
+    M1 = function(dataset, items, method) {
+      list(status = FALSE)
+    },
+    M2 = function(dataset, items, method) {
+      list(status = TRUE)
+    },
+    M3 = function(dataset, items, covariates, corr_method) {
+      list(status = FALSE)
+    },
+    .package = "twigg"
+  )
+
+  res <- screen_items(
+    dataset = dataset,
+    items = c("item1", "item2"),
+    covariates = "exo"
+  )
+
+  expect_false(res$passed)
+  expect_equal(res$failed_steps, c("M1", "M3"))
+  expect_output(print(res), "Failed steps: M1, M3")
+})
+
+## ---------------------------------------- ##
+test_that("screen_items does not globally complete-case all columns", {
+
+  dataset <- data.frame(
+    item1 = c(0, 1, 0, 1, 0, 1, 0, 1, 0, 1),
+    item2 = c(1, 1, 0, 0, 1, 0, 1, 1, 0, 0),
+    exo = c(0, 0, 1, 1, 0, 1, 0, 0, 1, 1),
+    unrelated = NA_real_
+  )
+
+  n_seen <- integer(0)
+
+  local_mocked_bindings(
+    M1 = function(dataset, items, method) {
+      n_seen <<- c(n_seen, nrow(dataset))
+      list(status = TRUE)
+    },
+    M2 = function(dataset, items, method) {
+      n_seen <<- c(n_seen, nrow(dataset))
+      list(status = TRUE)
+    },
+    M3 = function(dataset, items, covariates, corr_method) {
+      n_seen <<- c(n_seen, nrow(dataset))
+      list(status = TRUE)
+    },
+    .package = "twigg"
+  )
+
+  res <- screen_items(
+    dataset = dataset,
+    items = c("item1", "item2"),
+    covariates = "exo"
+  )
+
+  expect_true(res$passed)
+  expect_equal(n_seen, c(10L, 10L, 10L))
 })
 
 ## ---------------------------------------- ##
@@ -91,4 +197,3 @@ test_that("screen_items errors on invalid input", {
     "must be a character vector"
   )
 })
-

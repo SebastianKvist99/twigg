@@ -24,6 +24,10 @@ the test, i.e. a boolean indicating if the dataset passed M1 or not.
 \description{
 M1 test for consistency.
 }
+\details{
+Missing values are handled using complete cases of the selected item columns.
+Missingness in variables not listed in \code{items} does not affect M1.
+}
 \examples{
 df <- toy_spadi_pain
 items <- paste0("pain", 1:5)

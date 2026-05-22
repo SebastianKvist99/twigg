@@ -8,13 +8,16 @@ print.item_screening <- function(x, ...) {
   cat("Item screening result\n")
   cat("----------------------\n")
   cat("Passed: ", x$passed, "\n", sep = "")
-  failed <- if (is.null(x$failed_step) || length(x$failed_step) == 0) {
+  failed_steps <- x$failed_steps
+  if (is.null(failed_steps)) failed_steps <- x$failed_step
+
+  failed <- if (is.null(failed_steps) || length(failed_steps) == 0) {
     "None"
   } else {
-    paste(x$failed_step, collapse = ", ")
+    paste(failed_steps, collapse = ", ")
   }
 
-  cat("Failed step: ", failed, "\n", sep = "")
+  cat("Failed steps: ", failed, "\n", sep = "")
 
   invisible(x)
 }

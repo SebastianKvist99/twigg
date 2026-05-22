@@ -42,6 +42,9 @@ with the total score and with each item separately.
 \details{
 The M3 criterion requires that covariates related to the latent trait show
 consistent directional associations with item responses and the total score.
+Missing values are handled separately for each covariate: each covariate is
+evaluated on complete cases of the selected item columns and that covariate.
+Missingness in other covariates does not affect the calculation.
 }
 \examples{
 data <- toy_spadi_pain

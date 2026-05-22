@@ -23,6 +23,10 @@ M2 criteria.
 \description{
 M2 function to test for consistency
 }
+\details{
+Missing values are handled using complete cases of the selected item columns.
+Missingness in variables not listed in \code{items} does not affect M2.
+}
 \examples{
 data <- toy_spadi_pain
 items <- paste0("pain", 1:5)

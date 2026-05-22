@@ -35,8 +35,10 @@ An object of class \code{"item_screening"}, which is a named list
 containing:
 \describe{
 \item{passed}{Logical; \code{TRUE} if all screening steps passed.}
-\item{failed_step}{Character string indicating the step at which screening
-failed, or \code{NULL} if all steps passed.}
+\item{failed_steps}{Character vector indicating the steps at which
+screening failed. Empty if all steps passed.}
+\item{failed_step}{Deprecated compatibility alias for
+\code{failed_steps}. \code{NULL} if all steps passed.}
 \item{M1}{Result of the M1 screening step (if performed).}
 \item{M2}{Result of the M2 screening step (if performed).}
 \item{M3}{Data frame with M3 correlation results (if performed).}
@@ -64,5 +66,5 @@ res <- screen_items(
 )
 
 res$passed
-res$failed_step
+res$failed_steps
 }

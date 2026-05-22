@@ -10,6 +10,11 @@
 #' @returns A list with the following elements; the associations measure used,
 #' the explicit values for the associations measures and finally the result of
 #' the test, i.e. a boolean indicating if the dataset passed M1 or not.
+#'
+#' @details
+#' Missing values are handled using complete cases of the selected item columns.
+#' Missingness in variables not listed in \code{items} does not affect M1.
+#'
 #' @export
 #'
 #' @examples
@@ -25,10 +30,12 @@ M1 <- function(dataset, items, method = "gamma"){
     stop("please input a valid method of associations measure", call. = FALSE)
   }
 
+  dataset <- as_screening_data_frame(dataset)
   are_items_in_df(dataset, items)
   are_items_numeric(dataset, items)
 
-  X <- as.matrix(dataset[,items])
+  data <- complete_cases(dataset[items], 10)
+  X <- as.matrix(data[, items, drop = FALSE])
 
   if (method == "gamma"){
     associations <- matrix(data = NA, nrow = ncol(X), ncol = ncol(X),

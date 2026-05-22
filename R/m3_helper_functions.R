@@ -110,6 +110,7 @@ cor_one_pair <- function(x, y, method = "gamma"){#, include_pvalues = FALSE) {
 #'
 M3_one_covariate <- function(covariate_name, dataset, items, method){#, include_pvalues=FALSE) {
 
+  dataset <- complete_cases(dataset[unique(c(items, covariate_name))], 10)
   X_i <- check_covariate(dataset[[covariate_name]], covariate_name)
   items_df <- dataset[items]
   score <- compute_total_score(items_df)
@@ -170,7 +171,6 @@ check_M3_covariate <- function(df) {
 
   all(item_signs %in% c(score_sign, 0))
 }
-
 
 
 

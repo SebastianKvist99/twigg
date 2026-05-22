@@ -20,7 +20,24 @@ test_that("M1 function works with different methods", {
 })
 
 test_that("M1 works with both dataframes and matrix style inputs",{
-  matrix_style <- as.matrix(toy_spadi_pain)
+  items <- paste0("pain", 1:5)
+  matrix_style <- as.matrix(toy_spadi_pain[items])
+  res <- M1(matrix_style, items)
+
+  expect_true(res$status)
+})
+
+test_that("M1 complete-case filtering uses item columns only", {
+  df <- toy_spadi_pain
+  items <- paste0("pain", 1:5)
+  df$unrelated <- NA_real_
+  df$pain1[1:5] <- NA
+
+  expected <- M1(stats::na.omit(df[items]), items)
+  out <- M1(df, items)
+
+  expect_equal(out$associations, expected$associations)
+  expect_equal(out$status, expected$status)
 })
 
 
@@ -88,8 +105,6 @@ test_that("M1 throws the correct error when an
   expect_error(M1(toy_spadi_pain, paste0("pain", 1:5), method = "invalid"),
                "please input a valid method of associations measure")
 })
-
-
 
 
 

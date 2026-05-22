@@ -7,6 +7,9 @@
 #'
 #' The M3 criterion requires that covariates related to the latent trait show
 #' consistent directional associations with item responses and the total score.
+#' Missing values are handled separately for each covariate: each covariate is
+#' evaluated on complete cases of the selected item columns and that covariate.
+#' Missingness in other covariates does not affect the calculation.
 #'
 #' @param dataset A data frame containing item responses and covariates.
 #' @param items Character vector giving the names of item response variables
@@ -45,7 +48,10 @@ M3 <- function(dataset, items, covariates,
                corr_method = "gamma"){#,
                #include_pvalues = TRUE) {
 
-  dataset <- complete_cases(dataset, 10)
+  dataset <- as_screening_data_frame(dataset)
+  are_items_in_df(dataset, items)
+  are_items_numeric(dataset, items)
+  are_covaraites_in_df(dataset, covariates)
 
   results <- lapply(
     covariates,
@@ -75,4 +81,3 @@ M3 <- function(dataset, items, covariates,
 
   #return(list(correlations = out, status = fulfilled))
 }
-
