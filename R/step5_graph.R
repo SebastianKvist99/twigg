@@ -126,13 +126,6 @@ build_gllrm_graph <- function(items, covariates,
   structure(out, class = "gllrm_graph")
 }
 
-#' @param ... Arguments passed to \code{build_gllrm_graph()}.
-#' @rdname build_gllrm_graph
-#' @export
-step5_build_graph <- function(...) {
-  build_gllrm_graph(...)
-}
-
 step5_check_names <- function(x, arg) {
   if (!is.character(x) || length(x) == 0 || anyNA(x) || any(x == "")) {
     stop("'", arg, "' must be a non-empty character vector", call. = FALSE)

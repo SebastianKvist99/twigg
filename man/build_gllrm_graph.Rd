@@ -2,7 +2,6 @@
 % Please edit documentation in R/step5_graph.R
 \name{build_gllrm_graph}
 \alias{build_gllrm_graph}
-\alias{step5_build_graph}
 \title{Step 5: build the GLLRM graph from screening results}
 \usage{
 build_gllrm_graph(
@@ -15,8 +14,6 @@ build_gllrm_graph(
   score_node = "Score",
   include_score_node = TRUE
 )
-
-step5_build_graph(...)
 }
 \arguments{
 \item{items}{Character vector naming the item response variables.}
@@ -39,8 +36,6 @@ with graph terminology.}
 
 \item{include_score_node}{Logical. If \code{TRUE}, include the score node and
 Step 4 score-covariate edges when \code{step4} or \code{score} is supplied.}
-
-\item{...}{Arguments passed to \code{build_gllrm_graph()}.}
 }
 \value{
 An object of class \code{"gllrm_graph"}, a list containing:

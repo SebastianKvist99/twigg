@@ -171,17 +171,6 @@ test_that("gllrm_graph S3 helpers print and summarize", {
   expect_equal(names(out$edges), c("from", "to", "edge_type"))
 })
 
-test_that("step5_build_graph is a convenience wrapper", {
-
-  out <- step5_build_graph(
-    items = "item1",
-    covariates = "sex"
-  )
-
-  expect_s3_class(out, "gllrm_graph")
-  expect_equal(nrow(out$edges), 0)
-})
-
 test_that("build_irt_graph derives the IRT chain graph", {
 
   step5 <- build_gllrm_graph(
