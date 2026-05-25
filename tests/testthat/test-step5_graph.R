@@ -55,7 +55,7 @@ test_that("build_gllrm_graph combines LD, DIF, and Step 4 edges", {
   expect_equal(out$dif_edges$p_value, 0.02)
   expect_equal(out$score_edges$to, "bmi")
   expect_equal(out$score_edges$conditioned_on, "sex")
-  expect_equal(out$edges$edge_id, 1:3)
+  expect_equal(names(out$edges), c("from", "to", "edge_type"))
 })
 
 test_that("build_gllrm_graph accepts direct data frame inputs", {
@@ -152,7 +152,7 @@ test_that("build_gllrm_graph reports meaningful input errors", {
   )
 })
 
-test_that("gllrm_graph S3 helpers print, summarize, and expose igraph", {
+test_that("gllrm_graph S3 helpers print and summarize", {
 
   out <- build_gllrm_graph(
     items = c("item1", "item2"),
@@ -168,12 +168,7 @@ test_that("gllrm_graph S3 helpers print, summarize, and expose igraph", {
   expect_output(print(out), "GLLRM Step 5 graph")
   expect_s3_class(summary(out), "summary.gllrm_graph")
   expect_output(print(summary(out)), "Summary of GLLRM Step 5")
-
-  if (requireNamespace("igraph", quietly = TRUE)) {
-    expect_s3_class(as_igraph(out), "igraph")
-  } else {
-    expect_error(as_igraph(out), "igraph")
-  }
+  expect_equal(names(out$edges), c("from", "to", "edge_type"))
 })
 
 test_that("step5_build_graph is a convenience wrapper", {
@@ -187,3 +182,109 @@ test_that("step5_build_graph is a convenience wrapper", {
   expect_equal(nrow(out$edges), 0)
 })
 
+test_that("build_irt_graph derives the IRT chain graph", {
+
+  step5 <- build_gllrm_graph(
+    items = c("item1", "item2", "item3"),
+    covariates = c("sex", "bmi"),
+    ld = data.frame(
+      item1 = "item1",
+      item2 = "item2",
+      stringsAsFactors = FALSE
+    ),
+    dif = data.frame(
+      item = "item2",
+      DIF_source = "sex",
+      conclusion = "DIF",
+      stringsAsFactors = FALSE
+    ),
+    step4 = data.frame(
+      covariate = "bmi",
+      p_value = 0.01,
+      stringsAsFactors = FALSE
+    )
+  )
+
+  out <- build_irt_graph(step5, theta = "theta")
+
+  expect_s3_class(out, "gllrm_irt_graph")
+  expect_equal(out$nodes$name, c("theta", "item1", "item2", "item3",
+                                 "sex", "bmi"))
+  expect_equal(sum(out$edges$edge_type == "measurement"), 3)
+  expect_true(any(out$edges$from == "bmi" & out$edges$to == "theta" &
+                    out$edges$directed))
+  expect_true(any(out$edges$from == "sex" & out$edges$to == "item2" &
+                    out$edges$directed))
+  expect_true(any(out$edges$from == "item1" & out$edges$to == "item2" &
+                    !out$edges$directed))
+})
+
+test_that("build_moralized_graph derives the marginal moral graph", {
+
+  step5 <- build_gllrm_graph(
+    items = c("item1", "item2", "item3"),
+    covariates = c("sex", "bmi"),
+    ld = data.frame(
+      item1 = "item1",
+      item2 = "item2",
+      stringsAsFactors = FALSE
+    ),
+    dif = data.frame(
+      item = "item2",
+      DIF_source = "sex",
+      conclusion = "DIF",
+      stringsAsFactors = FALSE
+    ),
+    step4 = data.frame(
+      covariate = "bmi",
+      p_value = 0.01,
+      stringsAsFactors = FALSE
+    )
+  )
+
+  out <- build_moralized_graph(step5, score_node = "#")
+
+  expect_s3_class(out, "gllrm_moral_graph")
+  expect_true(all(!out$edges$directed))
+  expect_equal(out$nodes$name, c("#", "item1", "item2", "item3",
+                                 "sex", "bmi"))
+  expect_equal(sum(out$score_item_edges$edge_type == "score_item"), 3)
+  expect_equal(nrow(out$item_moral_edges), 3)
+  expect_true(any(out$edges$from == "#" & out$edges$to == "sex"))
+  expect_true(any(out$edges$from == "#" & out$edges$to == "bmi"))
+  expect_true(any(out$edges$from == "item2" & out$edges$to == "sex"))
+})
+
+test_that("derived graph builders validate names and optional covariate edges", {
+
+  step5 <- build_gllrm_graph(
+    items = "item1",
+    covariates = c("sex", "bmi")
+  )
+
+  out <- build_irt_graph(
+    step5,
+    covariate_edges = data.frame(from = "sex", to = "bmi")
+  )
+  expect_true(any(
+    ((out$edges$from == "sex" & out$edges$to == "bmi") |
+       (out$edges$from == "bmi" & out$edges$to == "sex")) &
+      !out$edges$directed
+  ))
+
+  expect_error(
+    build_irt_graph(step5, theta = "item1"),
+    "must not duplicate"
+  )
+  expect_error(
+    build_moralized_graph(step5, score_node = "sex"),
+    "must not duplicate"
+  )
+  expect_error(
+    build_irt_graph(
+      step5,
+      covariate_edges = data.frame(from = "sex", to = "missing")
+    ),
+    "not listed in the graph"
+  )
+})

@@ -63,16 +63,8 @@ step4_criterion_summary <- function(test_rows, alpha) {
   data.frame(
     covariate = test_rows$covariate,
     gamma = test_rows$gamma,
-    direction = ifelse(
-      is.na(test_rows$gamma),
-      NA_character_,
-      ifelse(test_rows$gamma > 0, "positive",
-             ifelse(test_rows$gamma < 0, "negative", "zero"))
-    ),
     p_value = test_rows$p_value,
-    p_value_label = test_rows$p_value_label,
     adjusted_p_value = test_rows$adjusted_p_value,
-    adjusted_p_value_label = test_rows$adjusted_p_value_label,
     conditioned_on = test_rows$conditioned_on,
     supports_criterion_validity = !is.na(test_rows$decision_p_value) &
       test_rows$decision_p_value <= alpha,

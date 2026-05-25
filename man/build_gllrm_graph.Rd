@@ -13,8 +13,7 @@ build_gllrm_graph(
   step4 = NULL,
   score = NULL,
   score_node = "Score",
-  include_score_node = TRUE,
-  directed = FALSE
+  include_score_node = TRUE
 )
 
 step5_build_graph(...)
@@ -41,31 +40,26 @@ with graph terminology.}
 \item{include_score_node}{Logical. If \code{TRUE}, include the score node and
 Step 4 score-covariate edges when \code{step4} or \code{score} is supplied.}
 
-\item{directed}{Logical passed to \code{igraph::graph_from_data_frame} when
-\pkg{igraph} is installed. The default is \code{FALSE}, matching the usual
-GLLRM graph interpretation.}
-
 \item{...}{Arguments passed to \code{build_gllrm_graph()}.}
 }
 \value{
 An object of class \code{"gllrm_graph"}, a list containing:
 \describe{
 \item{nodes}{Node table with node names and types.}
-\item{edges}{Unified edge table.}
-\item{ld_edges}{LD-only edge table.}
-\item{dif_edges}{DIF-only edge table.}
-\item{score_edges}{Step 4 score-covariate edge table.}
-\item{graph}{An \code{igraph} object if \pkg{igraph} is installed,
-otherwise \code{NULL}.}
-\item{directed}{Whether the graph was requested as directed.}
+\item{edges}{Minimal graph topology table with \code{from}, \code{to},
+and \code{edge_type}.}
+\item{ld_edges}{LD-only edge table with Step 3a evidence.}
+\item{dif_edges}{DIF-only edge table with Step 3b/3c evidence.}
+\item{score_edges}{Step 4 score-covariate edge table with criterion
+validity evidence.}
 \item{call}{The matched function call.}
 }
 }
 \description{
 Constructs the graph implied by the item-screening procedure after genuine
 local dependence, genuine DIF, and score-covariate associations have been
-identified. The function always returns node and edge tables. If the
-\pkg{igraph} package is installed, it also returns an \code{igraph} object.
+identified. The function returns node and edge tables. Detailed statistical
+evidence for each edge type is kept in the component-specific edge tables.
 }
 \details{
 The graph contains item nodes, exogenous covariate nodes, and optionally a

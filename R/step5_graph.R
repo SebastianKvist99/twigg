@@ -2,8 +2,8 @@
 #'
 #' Constructs the graph implied by the item-screening procedure after genuine
 #' local dependence, genuine DIF, and score-covariate associations have been
-#' identified. The function always returns node and edge tables. If the
-#' \pkg{igraph} package is installed, it also returns an \code{igraph} object.
+#' identified. The function returns node and edge tables. Detailed statistical
+#' evidence for each edge type is kept in the component-specific edge tables.
 #'
 #' The graph contains item nodes, exogenous covariate nodes, and optionally a
 #' score node. Edges are added for:
@@ -27,20 +27,16 @@
 #' @param score_node Character string naming the score node.
 #' @param include_score_node Logical. If \code{TRUE}, include the score node and
 #'   Step 4 score-covariate edges when \code{step4} or \code{score} is supplied.
-#' @param directed Logical passed to \code{igraph::graph_from_data_frame} when
-#'   \pkg{igraph} is installed. The default is \code{FALSE}, matching the usual
-#'   GLLRM graph interpretation.
 #'
 #' @returns An object of class \code{"gllrm_graph"}, a list containing:
 #' \describe{
 #'   \item{nodes}{Node table with node names and types.}
-#'   \item{edges}{Unified edge table.}
-#'   \item{ld_edges}{LD-only edge table.}
-#'   \item{dif_edges}{DIF-only edge table.}
-#'   \item{score_edges}{Step 4 score-covariate edge table.}
-#'   \item{graph}{An \code{igraph} object if \pkg{igraph} is installed,
-#'     otherwise \code{NULL}.}
-#'   \item{directed}{Whether the graph was requested as directed.}
+#'   \item{edges}{Minimal graph topology table with \code{from}, \code{to},
+#'     and \code{edge_type}.}
+#'   \item{ld_edges}{LD-only edge table with Step 3a evidence.}
+#'   \item{dif_edges}{DIF-only edge table with Step 3b/3c evidence.}
+#'   \item{score_edges}{Step 4 score-covariate edge table with criterion
+#'     validity evidence.}
 #'   \item{call}{The matched function call.}
 #' }
 #'
@@ -80,8 +76,7 @@ build_gllrm_graph <- function(items, covariates,
                               step4 = NULL,
                               score = NULL,
                               score_node = "Score",
-                              include_score_node = TRUE,
-                              directed = FALSE) {
+                              include_score_node = TRUE) {
   call <- match.call()
 
   step5_check_names(items, "items")
@@ -94,9 +89,6 @@ build_gllrm_graph <- function(items, covariates,
   if (!is.logical(include_score_node) || length(include_score_node) != 1 ||
       is.na(include_score_node)) {
     stop("'include_score_node' must be TRUE or FALSE", call. = FALSE)
-  }
-  if (!is.logical(directed) || length(directed) != 1 || is.na(directed)) {
-    stop("'directed' must be TRUE or FALSE", call. = FALSE)
   }
   if (!is.null(step4) && !is.null(score)) {
     stop("Use either 'step4' or 'score', not both", call. = FALSE)
@@ -113,17 +105,7 @@ build_gllrm_graph <- function(items, covariates,
   )
 
   edges <- step5_bind_edges(list(ld_edges, dif_edges, score_edges))
-  if (nrow(edges) > 0) {
-    edges$edge_id <- seq_len(nrow(edges))
-    edges <- edges[, c("from", "to", "edge_id",
-                       setdiff(names(edges), c("from", "to", "edge_id"))),
-                   drop = FALSE]
-  } else {
-    edges$edge_id <- integer(0)
-    edges <- edges[, c("from", "to", "edge_id",
-                       setdiff(names(edges), c("from", "to", "edge_id"))),
-                   drop = FALSE]
-  }
+  edges <- step5_topology_edges(edges)
 
   nodes <- step5_node_table(
     items = items,
@@ -132,23 +114,12 @@ build_gllrm_graph <- function(items, covariates,
     include_score_node = include_score_node
   )
 
-  graph <- NULL
-  if (requireNamespace("igraph", quietly = TRUE)) {
-    graph <- igraph::graph_from_data_frame(
-      d = edges,
-      directed = directed,
-      vertices = nodes
-    )
-  }
-
   out <- list(
     nodes = nodes,
     edges = edges,
     ld_edges = ld_edges,
     dif_edges = dif_edges,
     score_edges = score_edges,
-    graph = graph,
-    directed = directed,
     call = call
   )
 
@@ -212,6 +183,12 @@ step5_bind_edges <- function(edge_list) {
   }
 
   out <- do.call(rbind, edge_list)
+  row.names(out) <- NULL
+  out
+}
+
+step5_topology_edges <- function(edges) {
+  out <- edges[, c("from", "to", "edge_type"), drop = FALSE]
   row.names(out) <- NULL
   out
 }
@@ -451,10 +428,362 @@ step5_node_table <- function(items, covariates, score_node,
   )
 }
 
+step5_empty_mixed_edges <- function() {
+  data.frame(
+    from = character(0),
+    to = character(0),
+    edge_type = character(0),
+    directed = logical(0),
+    stringsAsFactors = FALSE
+  )
+}
+
+step5_mixed_edges <- function(from, to, edge_type, directed) {
+  if (length(from) == 0 || length(to) == 0) {
+    return(step5_empty_mixed_edges())
+  }
+
+  data.frame(
+    from = as.character(from),
+    to = as.character(to),
+    edge_type = rep(edge_type, length.out = length(from)),
+    directed = rep(directed, length.out = length(from)),
+    stringsAsFactors = FALSE
+  )
+}
+
+step5_bind_mixed_edges <- function(edge_list) {
+  edge_list <- edge_list[vapply(edge_list, nrow, integer(1)) > 0]
+  if (length(edge_list) == 0) return(step5_empty_mixed_edges())
+
+  out <- do.call(rbind, edge_list)
+  row.names(out) <- NULL
+  out
+}
+
+step5_unique_mixed_edges <- function(edges) {
+  if (nrow(edges) == 0) return(edges)
+
+  key_from <- ifelse(edges$directed, edges$from, pmin(edges$from, edges$to))
+  key_to <- ifelse(edges$directed, edges$to, pmax(edges$from, edges$to))
+  key <- paste(edges$directed, key_from, key_to, sep = "\r")
+  key_levels <- unique(key)
+
+  out <- do.call(rbind, lapply(key_levels, function(k) {
+    idx <- which(key == k)
+    first <- idx[1]
+    data.frame(
+      from = key_from[first],
+      to = key_to[first],
+      edge_type = paste(unique(edges$edge_type[idx]), collapse = "+"),
+      directed = edges$directed[first],
+      stringsAsFactors = FALSE
+    )
+  }))
+  row.names(out) <- NULL
+  out
+}
+
+step5_pair_edges <- function(nodes, edge_type) {
+  if (length(nodes) < 2) return(step5_empty_mixed_edges())
+  pairs <- utils::combn(nodes, 2)
+  step5_mixed_edges(pairs[1, ], pairs[2, ], edge_type, FALSE)
+}
+
+step5_validate_graph_object <- function(x) {
+  if (!inherits(x, "gllrm_graph")) {
+    stop("'x' must be a gllrm_graph object", call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+step5_graph_nodes_of_type <- function(x, type) {
+  as.character(x$nodes$name[x$nodes$type == type])
+}
+
+step5_covariate_association_edges <- function(covariate_edges, covariates) {
+  if (is.null(covariate_edges)) return(step5_empty_mixed_edges())
+
+  covariate_edges <- step5_as_data_frame(covariate_edges, "covariate_edges")
+  if (nrow(covariate_edges) == 0) return(step5_empty_mixed_edges())
+
+  step5_require_columns(covariate_edges, c("from", "to"), "covariate_edges")
+
+  missing_covariates <- setdiff(
+    unique(c(covariate_edges$from, covariate_edges$to)),
+    covariates
+  )
+  if (length(missing_covariates) > 0) {
+    stop(
+      "'covariate_edges' contains covariate(s) not listed in the graph: ",
+      paste(missing_covariates, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  edge_type <- if ("edge_type" %in% names(covariate_edges)) {
+    as.character(covariate_edges$edge_type)
+  } else {
+    rep("covariate_association", nrow(covariate_edges))
+  }
+
+  step5_mixed_edges(
+    from = covariate_edges$from,
+    to = covariate_edges$to,
+    edge_type = edge_type,
+    directed = FALSE
+  )
+}
+
+step5_irt_node_table <- function(items, covariates, theta) {
+  node_names <- unique(c(theta, items, covariates))
+  data.frame(
+    name = node_names,
+    label = node_names,
+    type = ifelse(node_names == theta,
+                  "latent",
+                  ifelse(node_names %in% items, "item", "covariate")),
+    stringsAsFactors = FALSE
+  )
+}
+
+step5_moral_node_table <- function(items, covariates, score_node) {
+  node_names <- unique(c(score_node, items, covariates))
+  data.frame(
+    name = node_names,
+    label = node_names,
+    type = ifelse(node_names == score_node,
+                  "score",
+                  ifelse(node_names %in% items, "item", "covariate")),
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Build the IRT graph implied by a Step 5 graph
+#'
+#' Converts the Step 5 evidence graph into an IRT-style chain graph. The latent
+#' variable points to all items, retained score-covariate associations point to
+#' the latent variable, DIF edges point from covariates to items, and local
+#' dependence edges remain undirected between items.
+#'
+#' @param x A \code{"gllrm_graph"} object returned by
+#'   \code{\link{build_gllrm_graph}}.
+#' @param theta Character string naming the latent variable node.
+#' @param covariate_edges Optional data frame with columns \code{from} and
+#'   \code{to} describing associations among exogenous covariates.
+#'
+#' @returns An object of class \code{"gllrm_irt_graph"}, a list containing
+#'   plotting-ready \code{nodes} and \code{edges} tables.
+#' @export
+build_irt_graph <- function(x, theta = "theta", covariate_edges = NULL) {
+  call <- match.call()
+  step5_validate_graph_object(x)
+  step5_check_names(theta, "theta")
+  if (length(theta) != 1) {
+    stop("'theta' must be a single character string", call. = FALSE)
+  }
+
+  items <- step5_graph_nodes_of_type(x, "item")
+  covariates <- step5_graph_nodes_of_type(x, "covariate")
+  if (theta %in% c(items, covariates)) {
+    stop("'theta' must not duplicate an item or covariate name",
+         call. = FALSE)
+  }
+
+  measurement_edges <- step5_mixed_edges(
+    from = theta,
+    to = items,
+    edge_type = "measurement",
+    directed = TRUE
+  )
+  score_edges <- step5_mixed_edges(
+    from = x$score_edges$to,
+    to = theta,
+    edge_type = "score_association",
+    directed = TRUE
+  )
+  dif_edges <- step5_mixed_edges(
+    from = x$dif_edges$to,
+    to = x$dif_edges$from,
+    edge_type = "DIF",
+    directed = TRUE
+  )
+  ld_edges <- step5_mixed_edges(
+    from = x$ld_edges$from,
+    to = x$ld_edges$to,
+    edge_type = "local_dependence",
+    directed = FALSE
+  )
+  covariate_edges <- step5_covariate_association_edges(
+    covariate_edges,
+    covariates
+  )
+
+  edges <- step5_bind_mixed_edges(list(
+    measurement_edges,
+    score_edges,
+    dif_edges,
+    ld_edges,
+    covariate_edges
+  ))
+  edges <- step5_unique_mixed_edges(edges)
+
+  out <- list(
+    nodes = step5_irt_node_table(items, covariates, theta),
+    edges = edges,
+    measurement_edges = measurement_edges,
+    score_edges = score_edges,
+    dif_edges = dif_edges,
+    ld_edges = ld_edges,
+    covariate_edges = covariate_edges,
+    theta = theta,
+    call = call
+  )
+
+  structure(out, class = c("gllrm_irt_graph", "gllrm_graph"))
+}
+
+step5_moral_parent_edges <- function(score_node, score_covariates,
+                                     dif_edges) {
+  score_parent_edges <- step5_pair_edges(
+    score_covariates,
+    "moralized_parent"
+  )
+
+  if (nrow(dif_edges) == 0) {
+    return(score_parent_edges)
+  }
+
+  dif_score_edges <- step5_mixed_edges(
+    from = score_node,
+    to = dif_edges$to,
+    edge_type = "moralized_parent",
+    directed = FALSE
+  )
+
+  item_sources <- split(dif_edges$to, dif_edges$from)
+  dif_source_edges <- step5_bind_mixed_edges(lapply(item_sources, function(z) {
+    step5_pair_edges(unique(z), "moralized_parent")
+  }))
+
+  step5_bind_mixed_edges(list(
+    score_parent_edges,
+    dif_score_edges,
+    dif_source_edges
+  ))
+}
+
+#' Build the moralized marginal graph implied by a Step 5 graph
+#'
+#' Constructs the Figure 6b-style undirected graph used to read off minimal
+#' global Markov property hypotheses. The latent variable is replaced by a
+#' total score node, item-score moralization adds item-item edges, and directed
+#' parent structures are moralized by adding undirected edges between common
+#' parents.
+#'
+#' @param x A \code{"gllrm_graph"} object returned by
+#'   \code{\link{build_gllrm_graph}}.
+#' @param score_node Character string naming the total score node.
+#' @param covariate_edges Optional data frame with columns \code{from} and
+#'   \code{to} describing associations among exogenous covariates.
+#'
+#' @returns An object of class \code{"gllrm_moral_graph"}, a list containing
+#'   plotting-ready \code{nodes} and \code{edges} tables. All edges are
+#'   undirected.
+#' @export
+build_moralized_graph <- function(x, score_node = "#",
+                                  covariate_edges = NULL) {
+  call <- match.call()
+  step5_validate_graph_object(x)
+  step5_check_names(score_node, "score_node")
+  if (length(score_node) != 1) {
+    stop("'score_node' must be a single character string", call. = FALSE)
+  }
+
+  items <- step5_graph_nodes_of_type(x, "item")
+  covariates <- step5_graph_nodes_of_type(x, "covariate")
+  if (score_node %in% c(items, covariates)) {
+    stop("'score_node' must not duplicate an item or covariate name",
+         call. = FALSE)
+  }
+
+  score_item_edges <- step5_mixed_edges(
+    from = score_node,
+    to = items,
+    edge_type = "score_item",
+    directed = FALSE
+  )
+  item_moral_edges <- step5_pair_edges(
+    items,
+    "item_score_moralization"
+  )
+  score_edges <- step5_mixed_edges(
+    from = score_node,
+    to = x$score_edges$to,
+    edge_type = "score_association",
+    directed = FALSE
+  )
+  dif_edges <- step5_mixed_edges(
+    from = x$dif_edges$from,
+    to = x$dif_edges$to,
+    edge_type = "DIF",
+    directed = FALSE
+  )
+  ld_edges <- step5_mixed_edges(
+    from = x$ld_edges$from,
+    to = x$ld_edges$to,
+    edge_type = "local_dependence",
+    directed = FALSE
+  )
+  covariate_edges <- step5_covariate_association_edges(
+    covariate_edges,
+    covariates
+  )
+  moral_parent_edges <- step5_moral_parent_edges(
+    score_node = score_node,
+    score_covariates = x$score_edges$to,
+    dif_edges = x$dif_edges
+  )
+
+  edges <- step5_bind_mixed_edges(list(
+    score_item_edges,
+    item_moral_edges,
+    score_edges,
+    dif_edges,
+    ld_edges,
+    covariate_edges,
+    moral_parent_edges
+  ))
+  edges <- step5_unique_mixed_edges(edges)
+
+  out <- list(
+    nodes = step5_moral_node_table(items, covariates, score_node),
+    edges = edges,
+    score_item_edges = score_item_edges,
+    item_moral_edges = item_moral_edges,
+    score_edges = score_edges,
+    dif_edges = dif_edges,
+    ld_edges = ld_edges,
+    covariate_edges = covariate_edges,
+    moral_parent_edges = moral_parent_edges,
+    score_node = score_node,
+    call = call
+  )
+
+  structure(out, class = c("gllrm_moral_graph", "gllrm_graph"))
+}
+
 #' @export
 print.gllrm_graph <- function(x, ...) {
-  cat("GLLRM Step 5 graph\n")
-  cat("------------------\n")
+  title <- if (inherits(x, "gllrm_irt_graph")) {
+    "GLLRM IRT graph"
+  } else if (inherits(x, "gllrm_moral_graph")) {
+    "GLLRM moralized marginal graph"
+  } else {
+    "GLLRM Step 5 graph"
+  }
+  cat(title, "\n", sep = "")
+  cat(paste(rep("-", nchar(title)), collapse = ""), "\n", sep = "")
   cat("Nodes: ", nrow(x$nodes), "\n", sep = "")
   cat("Edges: ", nrow(x$edges), "\n", sep = "")
 
@@ -464,10 +793,6 @@ print.gllrm_graph <- function(x, ...) {
       cat("  ", nm, ": ", unname(edge_counts[[nm]]), "\n", sep = "")
     }
   }
-
-  cat("igraph object: ",
-      ifelse(is.null(x$graph), "not available", "available"),
-      "\n", sep = "")
 
   invisible(x)
 }
@@ -488,9 +813,7 @@ summary.gllrm_graph <- function(object, ...) {
     n_edges = nrow(object$edges),
     nodes = object$nodes,
     edges_by_type = edge_counts,
-    edges = object$edges,
-    has_igraph = !is.null(object$graph),
-    directed = object$directed
+    edges = object$edges
   )
 
   class(out) <- "summary.gllrm_graph"
@@ -503,7 +826,6 @@ print.summary.gllrm_graph <- function(x, ...) {
   cat("-----------------------------\n")
   cat("Nodes: ", x$n_nodes, "\n", sep = "")
   cat("Edges: ", x$n_edges, "\n", sep = "")
-  cat("Directed: ", x$directed, "\n", sep = "")
 
   if (nrow(x$edges_by_type) > 0) {
     cat("\nEdges by type:\n")
@@ -511,33 +833,4 @@ print.summary.gllrm_graph <- function(x, ...) {
   }
 
   invisible(x)
-}
-
-#' Convert a Step 5 graph object to igraph
-#'
-#' @param x A \code{"gllrm_graph"} object.
-#' @param ... Ignored.
-#'
-#' @returns An \code{igraph} object.
-#' @export
-as_igraph <- function(x, ...) {
-  UseMethod("as_igraph")
-}
-
-#' @export
-as_igraph.gllrm_graph <- function(x, ...) {
-  if (!inherits(x, "gllrm_graph")) {
-    stop("'x' must be a gllrm_graph object", call. = FALSE)
-  }
-  if (!is.null(x$graph)) return(x$graph)
-  if (!requireNamespace("igraph", quietly = TRUE)) {
-    stop("The 'igraph' package must be installed to create an igraph object",
-         call. = FALSE)
-  }
-
-  igraph::graph_from_data_frame(
-    d = x$edges,
-    directed = x$directed,
-    vertices = x$nodes
-  )
 }

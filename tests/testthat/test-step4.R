@@ -109,7 +109,11 @@ test_that("step4_structure_screen labels Monte Carlo p-values reported as zero",
 
   expect_equal(out$tests$p_value, 0)
   expect_equal(out$tests$p_value_label, "< 0.01")
-  expect_equal(out$criterion_validity$p_value_label, "< 0.01")
+  expect_false(any(c(
+    "p_value_label",
+    "adjusted_p_value_label",
+    "direction"
+  ) %in% names(out$criterion_validity)))
   expect_equal(out$criterion_validity_comparison$initial_p_value_label,
                "< 0.01")
 })
