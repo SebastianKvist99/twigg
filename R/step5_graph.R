@@ -161,7 +161,11 @@ step5_add_missing_edge_cols <- function(x) {
   empty <- step5_empty_edges()
   for (nm in names(empty)) {
     if (!nm %in% names(x)) {
-      x[[nm]] <- empty[[nm]][NA_integer_]
+      x[[nm]] <- if (nrow(x) == 0) {
+        empty[[nm]]
+      } else {
+        empty[[nm]][NA_integer_]
+      }
     }
   }
   x[, names(empty), drop = FALSE]

@@ -1,0 +1,367 @@
+---
+title: "Item Screening with twigg"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Item Screening with twigg}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+## Overview
+
+`twigg` implements tools for item screening in graphical loglinear Rasch
+models (GLLRMs). The package follows the screening logic described by Kreiner
+and Christensen: first check basic consistency, then screen for local
+dependence (LD), differential item functioning (DIF), and score-covariate
+associations, and finally translate the surviving evidence into graph objects.
+
+The main workflow is:
+
+1. Check item consistency with `M1()`, `M2()`, `M3()`, or `screen_items()`.
+2. Screen for potential LD with `screen_LD()`.
+3. Screen for potential DIF with `screen_DIF()`.
+4. Remove spurious LD and DIF evidence with `genuine_LD()`, `run_step3b()`,
+   `run_step3c()`, and `combine_step3bc()`.
+5. Screen score-covariate associations with `step4_structure_screen()`.
+6. Build and check the GLLRM graph with `build_gllrm_graph()` and
+   `step6_check_gllrm()`.
+
+The package returns ordinary data frames at each step. This makes the results
+easy to inspect, report, and pass to plotting packages.
+
+```{r setup}
+library(twigg)
+```
+
+## Data
+
+The package includes small simulated data sets for examples. Here we use
+`toy_sp_DIF_and_LD`, which contains five ordinal pain items and two exogenous
+covariates.
+
+```{r data}
+data(toy_sp_DIF_and_LD)
+
+items <- paste0("pain", 1:5)
+covariates <- c("sex", "age")
+
+str(toy_sp_DIF_and_LD[, c(items, covariates)])
+```
+
+## Step 1: Consistency Checks
+
+The first screening step checks whether the item responses behave in a way that
+is compatible with a Rasch-type measurement model. The convenience function
+`screen_items()` combines the package's M1, M2, and M3 checks.
+
+```{r step1, eval = FALSE}
+screen_items(
+  dataset = toy_sp_DIF_and_LD,
+  items = items,
+  covariates = covariates
+)
+```
+
+The component checks can also be run directly:
+
+```{r step1-components, eval = FALSE}
+M1(toy_sp_DIF_and_LD, items)
+M2(toy_sp_DIF_and_LD, items)
+M3(toy_sp_DIF_and_LD, items, covariates)
+```
+
+## Step 2: Initial LD and DIF Screening
+
+LD screening tests conditional associations between item pairs given rest
+scores. DIF screening tests conditional associations between items and
+exogenous covariates given the total score.
+
+These screening functions may run many conditional tests, so the chunks below
+are shown as workflow templates rather than evaluated during vignette building.
+
+```{r step2-ld, eval = FALSE}
+ld_screen <- screen_LD(
+  dataset = toy_sp_DIF_and_LD,
+  items = items,
+  crit_val = 0.05
+)
+```
+
+```{r step2-dif, eval = FALSE}
+dif_screen <- screen_DIF(
+  dataset = toy_sp_DIF_and_LD,
+  items = items,
+  covariates = covariates,
+  crit_val = 0.05
+)
+```
+
+## Step 3: Remove Spurious LD and DIF Evidence
+
+The initial LD and DIF screens can contain spurious evidence because the tests
+are derived under a simpler Rasch graph. Step 3 tries to separate genuine from
+spurious evidence.
+
+For LD, `genuine_LD()` takes the output of `screen_LD()` and returns item pairs
+that survive the Step 3a elimination procedure.
+
+```{r step3-ld, eval = FALSE}
+ld_step3 <- genuine_LD(ld_screen)
+ld_step3$genuine_ld
+```
+
+For DIF, the workflow first creates the `SOURCE` and `DIF` lists, then checks
+both item-specific source sets and source-specific DIF item sets.
+
+```{r step3-dif, eval = FALSE}
+sd <- s.d_list(
+  screen_DIF_output = dif_screen,
+  items = items,
+  covariates = covariates
+)
+
+step3b <- run_step3b(
+  dataset = toy_sp_DIF_and_LD,
+  source_list = sd$SOURCE,
+  items = items,
+  B = 1000
+)
+
+step3c <- run_step3c(
+  dataset = toy_sp_DIF_and_LD,
+  dif_list = sd$DIF,
+  items = items,
+  B = 1000
+)
+
+dif_step3 <- combine_step3bc(
+  step3b_results = step3b,
+  step3c_results = step3c,
+  original_source_list = sd$SOURCE,
+  original_dif_list = sd$DIF
+)
+
+dif_step3$table
+```
+
+## Step 4: Score-Covariate Associations
+
+Step 4 screens structural associations between the total score and the
+exogenous covariates. It is a backwards elimination procedure: each currently
+retained covariate is tested against the total score while conditioning on the
+other retained covariates.
+
+If `adjust_method` is supplied, adjusted p-values are used for the elimination
+decision. Otherwise, raw p-values are used.
+
+```{r step4, eval = FALSE}
+step4 <- step4_structure_screen(
+  data = toy_sp_DIF_and_LD,
+  items = items,
+  covariates = covariates,
+  alpha = 0.05,
+  adjust_method = NULL,
+  B = 1000
+)
+
+step4$criterion_validity
+step4$criterion_validity_comparison
+```
+
+## Step 5: Build the GLLRM Graph
+
+Step 5 collects the retained LD, DIF, and score-covariate evidence into a graph
+representation. The main `edges` table is intentionally minimal: it contains
+only `from`, `to`, and `edge_type`. The statistical evidence remains in
+`ld_edges`, `dif_edges`, and `score_edges`.
+
+The example below constructs a small Step 5 graph directly from data frames.
+This keeps the vignette fast while showing the shape of the object returned by
+`build_gllrm_graph()`.
+
+```{r step5-example}
+ld_example <- data.frame(
+  item1 = "pain1",
+  item2 = "pain2",
+  weighted_partial_gamma = 0.35
+)
+
+dif_example <- data.frame(
+  item = "pain3",
+  DIF_source = "sex",
+  gamma_1 = 0.22,
+  p_value_1 = 0.01,
+  conditioned_on_1 = "Score",
+  gamma_2 = 0.20,
+  p_value_2 = 0.02,
+  conditioned_on_2 = "Score",
+  conclusion = "DIF"
+)
+
+step4_example <- data.frame(
+  covariate = c("sex", "age"),
+  gamma = c(0.30, 0.25),
+  p_value = c(0.01, 0.03),
+  adjusted_p_value = c(NA_real_, NA_real_),
+  conditioned_on = c("age", "sex"),
+  supports_criterion_validity = c(TRUE, TRUE)
+)
+
+step5 <- build_gllrm_graph(
+  items = items,
+  covariates = covariates,
+  ld = ld_example,
+  dif = dif_example,
+  step4 = step4_example
+)
+
+step5
+step5$nodes
+step5$edges
+```
+
+The detailed evidence tables are still available:
+
+```{r step5-evidence}
+step5$ld_edges
+step5$dif_edges
+step5$score_edges
+```
+
+## IRT and Moralized Graphs
+
+The Step 5 graph is an evidence topology. Two helper functions derive the graph
+forms used in the GLLRM screening article.
+
+`build_irt_graph()` creates an IRT-style chain graph:
+
+- the latent variable points to every item;
+- retained score-covariate associations become covariate-to-latent arrows;
+- DIF becomes covariate-to-item arrows;
+- LD remains undirected between items.
+
+```{r irt-graph}
+irt_graph <- build_irt_graph(step5, theta = "theta")
+
+irt_graph$nodes
+irt_graph$edges
+```
+
+`build_moralized_graph()` creates the moralized marginal graph used to read
+off global Markov property hypotheses. It replaces the latent variable with a
+total score node, adds item-score moralization edges, and makes all edges
+undirected.
+
+```{r moral-graph}
+moral_graph <- build_moralized_graph(step5, score_node = "#")
+
+moral_graph$nodes
+moral_graph$edges
+```
+
+These tables can be passed to graph packages. For example, the moralized graph
+can be converted to an `igraph` object by users who have `igraph` installed:
+
+```{r igraph-example, eval = FALSE}
+g_moral <- igraph::graph_from_data_frame(
+  d = moral_graph$edges[, c("from", "to")],
+  vertices = moral_graph$nodes,
+  directed = FALSE
+)
+
+plot(g_moral)
+```
+
+The IRT graph has both directed and undirected edges. The `directed` column in
+`irt_graph$edges` is included so custom plotting code can draw arrows only for
+the directed rows.
+
+## Step 6: Check the GLLRM
+
+Step 6 retests the retained Step 5 DIF and LD edges under conditioning sets
+implied by the Step 5 graph. The current implementation provides the first
+confirmatory Step 6 layer:
+
+- C5-style checks for retained DIF edges;
+- C7/C9-style checks for retained LD edges;
+- removal of unsupported DIF and LD edges;
+- construction of an updated final graph and moralized graph.
+
+```{r step6, eval = FALSE}
+step6 <- step6_check_gllrm(
+  data = toy_sp_DIF_and_LD,
+  step5 = step5,
+  alpha = 0.05,
+  B = 1000
+)
+
+step6$dif_tests
+step6$ld_tests
+step6$removed_dif
+step6$removed_ld
+step6$final_graph
+step6$moralized_graph
+```
+
+Step 6 uses the same partial gamma conditional-independence engine as the DIF,
+LD, and Step 4 workflows. Searching the moralized graph for all minimal
+separating sets is not yet implemented; that is a natural next layer on top of
+the current model check.
+
+## Putting the Workflow Together
+
+A complete analysis script has the following shape:
+
+```{r full-workflow, eval = FALSE}
+data(toy_sp_DIF_and_LD)
+
+items <- paste0("pain", 1:5)
+covariates <- c("sex", "age")
+
+screen_items(toy_sp_DIF_and_LD, items, covariates)
+
+ld_screen <- screen_LD(toy_sp_DIF_and_LD, items)
+ld_step3 <- genuine_LD(ld_screen)
+
+dif_screen <- screen_DIF(toy_sp_DIF_and_LD, items, covariates)
+sd <- s.d_list(dif_screen, items, covariates)
+step3b <- run_step3b(toy_sp_DIF_and_LD, sd$SOURCE, items, B = 1000)
+step3c <- run_step3c(toy_sp_DIF_and_LD, sd$DIF, items, B = 1000)
+dif_step3 <- combine_step3bc(step3b, step3c, sd$SOURCE, sd$DIF)
+
+step4 <- step4_structure_screen(
+  data = toy_sp_DIF_and_LD,
+  items = items,
+  covariates = covariates,
+  B = 1000
+)
+
+step5 <- build_gllrm_graph(
+  items = items,
+  covariates = covariates,
+  ld = ld_step3,
+  dif = dif_step3,
+  step4 = step4
+)
+
+irt_graph <- build_irt_graph(step5)
+moral_graph <- build_moralized_graph(step5)
+
+step6 <- step6_check_gllrm(
+  data = toy_sp_DIF_and_LD,
+  step5 = step5,
+  B = 1000
+)
+```
+
+The final object to inspect is usually `step6$final_graph`, together with the
+test tables documenting which edges were retained or removed.

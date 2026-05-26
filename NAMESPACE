@@ -2,6 +2,7 @@
 
 S3method(print,gllrm_graph)
 S3method(print,gllrm_step4)
+S3method(print,gllrm_step6)
 S3method(print,summary.gllrm_graph)
 S3method(print,summary.gllrm_step4)
 S3method(summary,gllrm_graph)
@@ -21,4 +22,5 @@ export(screen_DIF)
 export(screen_LD)
 export(screen_items)
 export(step4_structure_screen)
+export(step6_check_gllrm)
 export(tidy.gllrm_step4)
