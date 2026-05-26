@@ -24,6 +24,9 @@ and Christensen: first check consistency, then screen for local
 dependence (LD), differential item functioning (DIF), score covariate
 associations, and finally translate the surviving evidence into graph objects.
 
+Please note, the purpose of this vignette is not to give a full statistical 
+deriviation of the procedure but to showcase how the package works in practice.
+
 The main workflow is:
 
 1. Check item consistency with `M1()`, `M2()`, `M3()`, or `screen_items()`.
@@ -36,7 +39,8 @@ The main workflow is:
    `step6_check_gllrm()`.
 
 The package returns ordinary data frames at each step. This makes the results
-easy to inspect, report, and most importantly; easy to pass to plotting packages.
+easy to inspect, report, and most importantly; easy to pass to as arguments
+to other existing (different) package functions, specifically plot functions.
 
 ```{r setup}
 library(twigg)
@@ -271,27 +275,26 @@ moral_graph$edges
 ```
 
 These tables can be passed to graph packages. For example, the moralized graph
-can be converted to an `igraph` object by users who have `igraph` installed:
+can be drawn using the `simpleNetwork` function form the `networkD3` package.
 
 ```{r igraph-example, eval = FALSE}
-g_moral <- igraph::graph_from_data_frame(
-  d = moral_graph$edges[, c("from", "to")],
-  vertices = moral_graph$nodes,
-  directed = FALSE
-)
+g_moral <- networkD3::simpleNetwork(moral_graph$edges[,c("from", "to")], 
+                              height="100px", 
+                              width="100px", 
+                              zoom = T)
 
-plot(g_moral)
+g_moral
 ```
 
 The IRT graph has both directed and undirected edges so it is not as stright 
-forward. However the `directed` column in `irt_graph$edges` is included so custom 
-plotting code can draw arrows only for the directed rows.
+forward. However the `directed` column in `irt_graph$edges` is included so 
+potential custom plotting code can draw arrows only for the directed rows.
 
 ## Step 6: Check the GLLRM
 
 Step 6 retests the retained Step 5 DIF and LD edges under conditioning sets
-implied by the Step 5 graph. The current implementation provides the first
-confirmatory Step 6 layer:
+implied by the Step 5 graph. The current implementation provides the first 
+Step 6 layer:
 
 - C5-style checks for retained DIF edges;
 - C7/C9-style checks for retained LD edges;
@@ -314,9 +317,9 @@ step6$final_graph
 step6$moralized_graph
 ```
 
-Step 6 uses the same partial gamma conditional-independence engine as the DIF,
-LD, and Step 4 workflows. Searching the moralized graph for all minimal
-separating sets is not yet implemented.
+Step 6 uses the same partial gamma conditional independence modules as the DIF,
+LD, and step 4. Searching the moralized graph for all minimal separating sets 
+is not yet implemented.
 
 ## Putting the Workflow Together
 
