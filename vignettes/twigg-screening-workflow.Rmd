@@ -18,10 +18,10 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-`twigg` implements tools for item screening in graphical loglinear Rasch
-models (GLLRMs). The package follows the screening logic described by Kreiner
-and Christensen: first check basic consistency, then screen for local
-dependence (LD), differential item functioning (DIF), and score-covariate
+`twigg` (name still TBD) implements tools for item screening in graphical log-linear 
+Rasch models (GLLRMs). The package follows the screening logic described by Kreiner
+and Christensen: first check consistency, then screen for local
+dependence (LD), differential item functioning (DIF), score covariate
 associations, and finally translate the surviving evidence into graph objects.
 
 The main workflow is:
@@ -31,12 +31,12 @@ The main workflow is:
 3. Screen for potential DIF with `screen_DIF()`.
 4. Remove spurious LD and DIF evidence with `genuine_LD()`, `run_step3b()`,
    `run_step3c()`, and `combine_step3bc()`.
-5. Screen score-covariate associations with `step4_structure_screen()`.
+5. Screen score covariate associations with `step4_structure_screen()`.
 6. Build and check the GLLRM graph with `build_gllrm_graph()` and
    `step6_check_gllrm()`.
 
 The package returns ordinary data frames at each step. This makes the results
-easy to inspect, report, and pass to plotting packages.
+easy to inspect, report, and most importantly; easy to pass to plotting packages.
 
 ```{r setup}
 library(twigg)
@@ -44,7 +44,7 @@ library(twigg)
 
 ## Data
 
-The package includes small simulated data sets for examples. Here we use
+The package includes some small simulated datasets for examples. Here we use
 `toy_sp_DIF_and_LD`, which contains five ordinal pain items and two exogenous
 covariates.
 
@@ -71,7 +71,20 @@ screen_items(
 )
 ```
 
-The component checks can also be run directly:
+We can also run only M1 and M3 inside the `screen_items()` function:
+
+```{r step1 niche example, eval = FALSE}
+screen_items(
+  dataset = toy_sp_DIF_and_LD,
+  items = items,
+  covariates = covariates,
+  run_M1 = TRUE,
+  run_M2 = FALSE,
+  run_M3 = TRUE
+)
+```
+
+The components can also be run directly:
 
 ```{r step1-components, eval = FALSE}
 M1(toy_sp_DIF_and_LD, items)
@@ -83,10 +96,7 @@ M3(toy_sp_DIF_and_LD, items, covariates)
 
 LD screening tests conditional associations between item pairs given rest
 scores. DIF screening tests conditional associations between items and
-exogenous covariates given the total score.
-
-These screening functions may run many conditional tests, so the chunks below
-are shown as workflow templates rather than evaluated during vignette building.
+exogenous varaibles given the total score.
 
 ```{r step2-ld, eval = FALSE}
 ld_screen <- screen_LD(
@@ -119,7 +129,7 @@ ld_step3 <- genuine_LD(ld_screen)
 ld_step3$genuine_ld
 ```
 
-For DIF, the workflow first creates the `SOURCE` and `DIF` lists, then checks
+For DIF, we first creates the `SOURCE` and `DIF` lists, then check
 both item-specific source sets and source-specific DIF item sets.
 
 ```{r step3-dif, eval = FALSE}
@@ -179,7 +189,7 @@ step4$criterion_validity_comparison
 
 ## Step 5: Build the GLLRM Graph
 
-Step 5 collects the retained LD, DIF, and score-covariate evidence into a graph
+Step 5 collects the retained LD, DIF, and score covariate evidence into a graph
 representation. The main `edges` table is intentionally minimal: it contains
 only `from`, `to`, and `edge_type`. The statistical evidence remains in
 `ld_edges`, `dif_edges`, and `score_edges`.
@@ -229,18 +239,10 @@ step5$nodes
 step5$edges
 ```
 
-The detailed evidence tables are still available:
-
-```{r step5-evidence}
-step5$ld_edges
-step5$dif_edges
-step5$score_edges
-```
-
 ## IRT and Moralized Graphs
 
-The Step 5 graph is an evidence topology. Two helper functions derive the graph
-forms used in the GLLRM screening article.
+The Step 5 graph records the LD, DIF, and score-covariate edges supported by the screening procedure. It is therefore an initial evidence graph. Two helper functions 
+derive the graph forms used in the GLLRM screening article.
 
 `build_irt_graph()` creates an IRT-style chain graph:
 
@@ -281,9 +283,9 @@ g_moral <- igraph::graph_from_data_frame(
 plot(g_moral)
 ```
 
-The IRT graph has both directed and undirected edges. The `directed` column in
-`irt_graph$edges` is included so custom plotting code can draw arrows only for
-the directed rows.
+The IRT graph has both directed and undirected edges so it is not as stright 
+forward. However the `directed` column in `irt_graph$edges` is included so custom 
+plotting code can draw arrows only for the directed rows.
 
 ## Step 6: Check the GLLRM
 
@@ -314,8 +316,7 @@ step6$moralized_graph
 
 Step 6 uses the same partial gamma conditional-independence engine as the DIF,
 LD, and Step 4 workflows. Searching the moralized graph for all minimal
-separating sets is not yet implemented; that is a natural next layer on top of
-the current model check.
+separating sets is not yet implemented.
 
 ## Putting the Workflow Together
 
@@ -363,5 +364,5 @@ step6 <- step6_check_gllrm(
 )
 ```
 
-The final object to inspect is usually `step6$final_graph`, together with the
-test tables documenting which edges were retained or removed.
+The natural final object to inspect, as of now, is `step6$final_graph`, 
+together with the test tables documenting which edges were retained or removed.
