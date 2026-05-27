@@ -201,6 +201,48 @@ test_that("combine_step3bc returns transparent comparison table", {
   expect_equal(out$table$conclusion[out$table$DIF_source == "BMI"], "Spurious")
 })
 
+test_that("combine_step3bc reports NA conclusion for uncomputed p-values", {
+
+  step3b_results <- list(
+    item1 = list(
+      remaining_sources = "Sex",
+      tests = list(
+        Sex = list(
+          gamma = 0.4,
+          p_value = 0.01,
+          strata_vars = "Score"
+        )
+      )
+    )
+  )
+
+  step3c_results <- list(
+    Sex = list(
+      remaining_dif_items = character(0),
+      tests = list(
+        item1 = list(
+          gamma = NA_real_,
+          p_value = NA_real_,
+          strata_vars = c("Score", "Age")
+        )
+      )
+    )
+  )
+
+  utils::capture.output(
+    out <- combine_step3bc(
+      step3b_results = step3b_results,
+      step3c_results = step3c_results,
+      original_source_list = list(item1 = "Sex"),
+      original_dif_list = list(Sex = "item1")
+    )
+  )
+
+  expect_true(is.na(out$table$conclusion[1]))
+  expect_equal(out$SOURCE$item1, character(0))
+  expect_equal(out$DIF$Sex, character(0))
+})
+
 test_that("partial_gamma_coin_test removes incomplete rows before block checks", {
 
   dataset <- data.frame(

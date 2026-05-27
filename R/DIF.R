@@ -701,21 +701,6 @@ combine_step3bc <- function(step3b_results, step3c_results,
     }
   }
 
-  # Intersection: pairs that survive both
-  surviving_pairs <- intersect(names(pairs_3b), names(pairs_3c))
-
-  # Rebuild SOURCE and DIF lists
-  new_source <- lapply(original_source_list, function(x) character(0))
-  new_dif <- lapply(original_dif_list, function(x) character(0))
-
-  for (pair_name in surviving_pairs) {
-    parts <- strsplit(pair_name, ":")[[1]]
-    Yi <- parts[1]
-    Xj <- parts[2]
-    new_source[[Yi]] <- c(new_source[[Yi]], Xj)
-    new_dif[[Xj]] <- c(new_dif[[Xj]], Yi)
-  }
-
   if (length(original_pairs) == 0) {
     result_table <- data.frame(
       item = character(0),
@@ -729,6 +714,9 @@ combine_step3bc <- function(step3b_results, step3c_results,
       conclusion = character(0)
     )
   } else {
+    # Pairs with an uncomputed p-value are inconclusive rather than spurious.
+    surviving_pairs <- intersect(names(pairs_3b), names(pairs_3c))
+
     result_table <- do.call(rbind, lapply(original_pairs, function(pair) {
       Yi <- pair[1]
       Xj <- pair[2]
@@ -737,24 +725,47 @@ combine_step3bc <- function(step3b_results, step3c_results,
       test_3b <- step3b_results[[Yi]]$tests[[Xj]]
       test_3c <- step3c_results[[Xj]]$tests[[Yi]]
 
+      p_value_1 <- if (is.null(test_3b)) NA_real_ else
+        unname(test_3b$p_value[1])
+      p_value_2 <- if (is.null(test_3c)) NA_real_ else
+        unname(test_3c$p_value[1])
+      conclusion <- if (is.na(p_value_1) || is.na(p_value_2)) {
+        NA_character_
+      } else if (pair_name %in% surviving_pairs) {
+        "DIF"
+      } else {
+        "Spurious"
+      }
+
       data.frame(
         item = Yi,
         DIF_source = Xj,
         gamma_1 = if (is.null(test_3b)) NA_real_ else test_3b$gamma,
         conditioned_on_1 = if (is.null(test_3b)) NA_character_ else
           paste(test_3b$strata_vars, collapse = " + "),
-        p_value_1 = if (is.null(test_3b)) NA_real_ else
-          unname(test_3b$p_value[1]),
+        p_value_1 = p_value_1,
         gamma_2 = if (is.null(test_3c)) NA_real_ else test_3c$gamma,
         conditioned_on_2 = if (is.null(test_3c)) NA_character_ else
           paste(test_3c$strata_vars, collapse = " + "),
-        p_value_2 = if (is.null(test_3c)) NA_real_ else
-          unname(test_3c$p_value[1]),
-        conclusion = ifelse(pair_name %in% surviving_pairs, "DIF", "Spurious")
+        p_value_2 = p_value_2,
+        conclusion = conclusion
       )
     }))
 
     row.names(result_table) <- NULL
+  }
+
+  # Rebuild SOURCE and DIF lists from pairs with a determinate DIF conclusion.
+  new_source <- lapply(original_source_list, function(x) character(0))
+  new_dif <- lapply(original_dif_list, function(x) character(0))
+
+  dif_rows <- !is.na(result_table$conclusion) &
+    result_table$conclusion == "DIF"
+  for (i in which(dif_rows)) {
+    Yi <- result_table$item[i]
+    Xj <- result_table$DIF_source[i]
+    new_source[[Yi]] <- c(new_source[[Yi]], Xj)
+    new_dif[[Xj]] <- c(new_dif[[Xj]], Yi)
   }
 
   print(result_table)
