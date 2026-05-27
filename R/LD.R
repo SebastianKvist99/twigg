@@ -222,6 +222,13 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
                                         n = number_of_multiple_tests)
 
   ## ---- Step 3: Keep track of significant hypotheses ----
+  ld_long$pair_item1 <- pmin(ld_long$item1, ld_long$item2)
+  ld_long$pair_item2 <- pmax(ld_long$item1, ld_long$item2)
+  ld_long$pair_key <- paste(
+    ld_long$pair_item1,
+    ld_long$pair_item2,
+    sep = "\r"
+  )
   ld_long$pair_id <- paste(
     pmin(ld_long$item1, ld_long$item2),
     pmax(ld_long$item1, ld_long$item2),
@@ -274,30 +281,34 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
     pair_summary
   }
 
-  summarize_ld_pairs <- function(pair_ids, all_hypotheses, active_hypotheses) {
-    pair_ids <- unique(pair_ids)
-    pair_hypotheses <- all_hypotheses[all_hypotheses$pair_id %in% pair_ids, ,
+  summarize_ld_pairs <- function(pair_keys, all_hypotheses, active_hypotheses) {
+    pair_keys <- unique(pair_keys)
+    pair_hypotheses <- all_hypotheses[all_hypotheses$pair_key %in% pair_keys, ,
                                       drop = FALSE]
     active_pair_hypotheses <- active_hypotheses[
-      active_hypotheses$pair_id %in% pair_ids, , drop = FALSE]
+      active_hypotheses$pair_key %in% pair_keys, , drop = FALSE]
+
+    pair_map <- unique(pair_hypotheses[, c(
+      "pair_key", "pair_id", "pair_item1", "pair_item2"
+    )])
 
     pair_summary <- stats::reshape(
-      pair_hypotheses[, c("pair_id", "direction", "gamma")],
-      idvar = "pair_id",
+      pair_hypotheses[, c("pair_key", "direction", "gamma")],
+      idvar = "pair_key",
       timevar = "direction",
       direction = "wide"
     )
 
     pair_weights <- stats::reshape(
-      pair_hypotheses[, c("pair_id", "direction", "comparable_pairs")],
-      idvar = "pair_id",
+      pair_hypotheses[, c("pair_key", "direction", "comparable_pairs")],
+      idvar = "pair_key",
       timevar = "direction",
       direction = "wide"
     )
 
     active_gammas <- stats::reshape(
-      active_pair_hypotheses[, c("pair_id", "direction", "gamma")],
-      idvar = "pair_id",
+      active_pair_hypotheses[, c("pair_key", "direction", "gamma")],
+      idvar = "pair_key",
       timevar = "direction",
       direction = "wide"
     )
@@ -319,9 +330,11 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
       active_gammas$active_gamma.R_j <- NA
     }
 
-    pair_summary <- merge(pair_summary, pair_weights, by = "pair_id",
+    pair_summary <- merge(pair_summary, pair_weights, by = "pair_key",
                           all.x = TRUE)
-    pair_summary <- merge(pair_summary, active_gammas, by = "pair_id",
+    pair_summary <- merge(pair_summary, active_gammas, by = "pair_key",
+                          all.x = TRUE)
+    pair_summary <- merge(pair_summary, pair_map, by = "pair_key",
                           all.x = TRUE)
 
     pair_summary$arithmetic_mean_gamma <- rowMeans(
@@ -346,8 +359,8 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
       weighted_sum / total_weight
     )
 
-    pair_summary$item1 <- sub("_.*", "", pair_summary$pair_id)
-    pair_summary$item2 <- sub(".*_", "", pair_summary$pair_id)
+    pair_summary$item1 <- pair_summary$pair_item1
+    pair_summary$item2 <- pair_summary$pair_item2
     add_ld_evidence_category(pair_summary)
   }
 
@@ -391,7 +404,7 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
   }
 
   ## ---- Step 5: Compute pair summary with both directional gammas ----
-  pair_summary <- summarize_ld_pairs(ld_significant$pair_id, ld_long,
+  pair_summary <- summarize_ld_pairs(ld_significant$pair_key, ld_long,
                                      ld_significant)
   ld_evidence_summary <- format_ld_evidence_summary(pair_summary)
 
@@ -405,7 +418,7 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
     repeat {
       if (nrow(working_hypotheses) == 0) break
 
-      working_pairs <- summarize_ld_pairs(working_hypotheses$pair_id,
+      working_pairs <- summarize_ld_pairs(working_hypotheses$pair_key,
                                           ld_long, working_hypotheses)
       working_pairs <- working_pairs[
         working_pairs$evidence_priority == priority &

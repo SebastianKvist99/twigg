@@ -121,6 +121,38 @@ test_that("genuine_LD finishes two-significant blocks before one-significant blo
   expect_equal(out$genuine_ld$item2[2], "b")
 })
 
+test_that("genuine_LD handles underscored item names with one significant direction", {
+  ld1 <- data.frame(
+    Item1 = "sat_pre_3",
+    Item2 = "sat_pre_2",
+    gamma = 0.10,
+    pvalue = 0.90,
+    comparable_pairs = 100
+  )
+
+  ld2 <- data.frame(
+    Item1 = "sat_pre_3",
+    Item2 = "sat_pre_2",
+    gamma = 0.8823529,
+    pvalue = 4.46989e-07,
+    comparable_pairs = 100
+  )
+
+  capture.output(out <- genuine_LD(
+    list(all_LD = list(ld1, ld2)),
+    number_of_multiple_tests = 2,
+    method = "BH"
+  ))
+
+  expect_equal(nrow(out$genuine_ld), 1)
+  expect_equal(out$genuine_ld$item1, "sat_pre_2")
+  expect_equal(out$genuine_ld$item2, "sat_pre_3")
+  expect_equal(
+    out$ld_evidence_summary$one_significant_positive_partial_correlation$item1,
+    "sat_pre_2"
+  )
+})
+
 test_that("screen_LD complete-case filtering uses item columns only", {
   dataset <- data.frame(
     item1 = c(0, 1, 1, 0, 1, 0, 1, 0, 1, 0),
