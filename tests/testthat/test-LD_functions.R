@@ -123,8 +123,8 @@ test_that("genuine_LD finishes two-significant blocks before one-significant blo
 
 test_that("genuine_LD handles underscored item names with one significant direction", {
   ld1 <- data.frame(
-    Item1 = "sat_pre_3",
-    Item2 = "sat_pre_2",
+    Item1 = "sat_pre_2",
+    Item2 = "sat_pre_3",
     gamma = 0.10,
     pvalue = 0.90,
     comparable_pairs = 100
@@ -151,6 +151,67 @@ test_that("genuine_LD handles underscored item names with one significant direct
     out$ld_evidence_summary$one_significant_positive_partial_correlation$item1,
     "sat_pre_2"
   )
+})
+
+test_that("genuine_LD discards evidence conditioned on selected LD items", {
+  ld1 <- data.frame(
+    Item1 = c("P1", "P3"),
+    Item2 = c("P4", "P4"),
+    gamma = c(-0.3596987, 0.5495495),
+    pvalue = c(1.435686e-03, 5.249030e-09),
+    padj.BH = c(2.871373e-02, 1.049806e-07),
+    comparable_pairs = c(100, 100)
+  )
+
+  ld2 <- data.frame(
+    Item1 = c("P4", "P4"),
+    Item2 = c("P1", "P3"),
+    gamma = c(-0.2943820, 0.3837838),
+    pvalue = c(0.20, 0.0003444608),
+    padj.BH = c(1.00, 0.006889216),
+    comparable_pairs = c(100, 100)
+  )
+
+  capture.output(out <- genuine_LD(
+    list(all_LD = list(ld1, ld2))
+  ))
+
+  expect_equal(nrow(out$genuine_ld), 1)
+  expect_equal(out$genuine_ld$item1, "P3")
+  expect_equal(out$genuine_ld$item2, "P4")
+  expect_equal(out$genuine_ld$gamma_cond_Ri, 0.3837838)
+  expect_equal(out$genuine_ld$gamma_cond_Rj, 0.5495495)
+})
+
+test_that("genuine_LD honors adjusted p-values from screen_LD output", {
+  ld1 <- data.frame(
+    Item1 = c("a", "c"),
+    Item2 = c("b", "d"),
+    gamma = c(0.4, -0.5),
+    pvalue = c(0.001, 0.02),
+    padj.BH = c(0.004, 0.08),
+    comparable_pairs = c(100, 100)
+  )
+
+  ld2 <- data.frame(
+    Item1 = c("b", "d"),
+    Item2 = c("a", "c"),
+    gamma = c(0.4, -0.5),
+    pvalue = c(0.001, 0.02),
+    padj.BH = c(0.004, 0.08),
+    comparable_pairs = c(100, 100)
+  )
+
+  capture.output(out <- genuine_LD(
+    list(all_LD = list(ld1, ld2))
+  ))
+
+  expect_equal(nrow(out$genuine_ld), 1)
+  expect_equal(out$genuine_ld$item1, "a")
+  expect_equal(out$genuine_ld$item2, "b")
+  expect_equal(nrow(
+    out$ld_evidence_summary$two_significant_negative_partial_correlations
+  ), 0)
 })
 
 test_that("screen_LD complete-case filtering uses item columns only", {

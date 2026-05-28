@@ -159,6 +159,7 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
                         method = "BH", crit_val = 0.05){
   ## ** pull out the neccessary info from screen_LD_output
   all.ld <- screen_LD_output$all_LD
+  user_supplied_multiple_tests <- !is.null(number_of_multiple_tests)
 
   ## ---- define number of multiple tests if not specified. Default is hence
   ## ---- just the number of LD tests.
@@ -170,14 +171,15 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
   ld1 <- all.ld[[1]]
   ld2 <- all.ld[[2]]
 
-  ## ---- Add conditioning item and direction ----
-  ## ld1: tests Yi ⟂ Yj | R_i
-  ld1$cond_item <- ld1$Item1
-  ld1$direction <- "R_i"
+  adjusted_p_column <- paste("padj", method, sep = ".")
+  use_screen_adjusted_p <- !user_supplied_multiple_tests &&
+    adjusted_p_column %in% names(ld1) &&
+    adjusted_p_column %in% names(ld2)
 
-  ## ld2: tests Yi ⟂ Yj | R_j
-  ld2$cond_item <- ld2$Item1
-  ld2$direction <- "R_j"
+  ## ---- Add conditioning item ----
+  ## quiet_partgam_LD computes rest scores by subtracting Item2.
+  ld1$cond_item <- ld1$Item2
+  ld2$cond_item <- ld2$Item2
 
   ## ---- Step 2: Create unified (long) dataset of hypotheses ----
   ld1_long <- data.frame(
@@ -185,6 +187,11 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
     item2 = ld1$Item2,
     gamma = ld1$gamma,
     raw_p_val = ld1$pvalue,
+    screen_adjusted_p = if (use_screen_adjusted_p) {
+      ld1[[adjusted_p_column]]
+    } else {
+      NA_real_
+    },
     comparable_pairs = if ("comparable_pairs" %in% names(ld1)) {
       ld1$comparable_pairs
     } else {
@@ -192,7 +199,6 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
     },
     #p_adj = ld1[,6],
     cond_item = ld1$cond_item,
-    direction = ld1$direction,
     stringsAsFactors = FALSE
   )
 
@@ -201,6 +207,11 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
     item2 = ld2$Item2,
     gamma = ld2$gamma,
     raw_p_val = ld2$pvalue,
+    screen_adjusted_p = if (use_screen_adjusted_p) {
+      ld2[[adjusted_p_column]]
+    } else {
+      NA_real_
+    },
     comparable_pairs = if ("comparable_pairs" %in% names(ld2)) {
       ld2$comparable_pairs
     } else {
@@ -208,7 +219,6 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
     },
     #p_adj = ld2[,6],
     cond_item = ld2$cond_item,
-    direction = ld2$direction,
     stringsAsFactors = FALSE
   )
 
@@ -216,10 +226,17 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
   ld_long <- rbind(ld1_long, ld2_long)
   ld_long$gamma <- as.numeric(ld_long$gamma)
   ld_long$raw_p_val <- as.numeric(ld_long$raw_p_val)
+  ld_long$screen_adjusted_p <- as.numeric(ld_long$screen_adjusted_p)
   ld_long$comparable_pairs <- as.numeric(ld_long$comparable_pairs)
-  ld_long$adjusted.p <- stats::p.adjust(unlist(ld_long$raw_p_val),
-                                        method = method,
-                                        n = number_of_multiple_tests)
+  ld_long$adjusted.p <- if (use_screen_adjusted_p) {
+    ld_long$screen_adjusted_p
+  } else {
+    stats::p.adjust(
+      unlist(ld_long$raw_p_val),
+      method = method,
+      n = number_of_multiple_tests
+    )
+  }
 
   ## ---- Step 3: Keep track of significant hypotheses ----
   ld_long$pair_item1 <- pmin(ld_long$item1, ld_long$item2)
@@ -228,6 +245,11 @@ genuine_LD <- function(screen_LD_output, number_of_multiple_tests = NULL,
     ld_long$pair_item1,
     ld_long$pair_item2,
     sep = "\r"
+  )
+  ld_long$direction <- ifelse(
+    ld_long$cond_item == ld_long$pair_item1,
+    "R_i",
+    ifelse(ld_long$cond_item == ld_long$pair_item2, "R_j", NA_character_)
   )
   ld_long$pair_id <- paste(
     pmin(ld_long$item1, ld_long$item2),
