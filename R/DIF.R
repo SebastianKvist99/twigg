@@ -49,12 +49,10 @@
 #' @export
 #'
 #' @examples
-#' data <- twigg::llraDat1
-#' data <- data[,c(paste0("t5.I", 1:5), "groups")]
-#' data_items <- paste0("t5.I", 1:5)
-#' covariates <- "groups"
-#'
-#' screen_DIF(data, data_items, covariates)
+#' data <- twigg::toy_sp_DIF_and_LD
+#' i.list <- paste0("pain", 1:5)
+#' exo.list <- c("age", "sex")
+#' screen_DIF(data, i.list, exo.list)
 #'
 screen_DIF <- function(dataset, items, covariates, crit_val = 0.05,
                        number_of_multiple_tests = NULL,
