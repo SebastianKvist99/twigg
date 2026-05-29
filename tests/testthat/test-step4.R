@@ -14,11 +14,18 @@ test_that("step4_structure_screen removes one covariate at a time and retests", 
     step4_one_test = function(dataset, Xj, covariates, B = 10000) {
       calls[[length(calls) + 1]] <<- list(Xj = Xj, covariates = covariates)
 
+      a_is_spurious <- Xj == "A" && "B" %in% covariates
       b_is_spurious <- Xj == "B" && "A" %in% covariates
 
       list(
         gamma = if (Xj == "C") 0.7 else 0.2,
-        p_value = if (Xj == "A" || b_is_spurious) 0.50 else 0.01,
+        p_value = if (a_is_spurious) {
+          0.40
+        } else if (b_is_spurious) {
+          0.50
+        } else {
+          0.01
+        },
         strata_vars = setdiff(covariates, Xj)
       )
     },
@@ -33,13 +40,13 @@ test_that("step4_structure_screen removes one covariate at a time and retests", 
   )
 
   expect_s3_class(out, "gllrm_step4")
-  expect_equal(out$retained_covariates, c("B", "C"))
-  expect_equal(out$removed_covariates, "A")
+  expect_equal(out$retained_covariates, c("A", "C"))
+  expect_equal(out$removed_covariates, "B")
   expect_equal(vapply(calls, `[[`, character(1), "Xj"),
-               c("A", "B", "C", "B", "C"))
-  expect_equal(calls[[4]]$covariates, c("B", "C"))
+               c("A", "B", "C", "A", "C"))
+  expect_equal(calls[[4]]$covariates, c("A", "C"))
   expect_equal(out$tests$conditioned_on[out$tests$iteration == 2 &
-                                          out$tests$covariate == "B"],
+                                          out$tests$covariate == "A"],
                "C")
   expect_true(all(c(
     "initial_criterion_validity",
@@ -47,9 +54,9 @@ test_that("step4_structure_screen removes one covariate at a time and retests", 
     "criterion_validity_comparison"
   ) %in% names(out)))
   expect_equal(out$initial_criterion_validity$covariate, c("A", "B", "C"))
-  expect_equal(out$criterion_validity$covariate, c("B", "C"))
+  expect_equal(out$criterion_validity$covariate, c("A", "C"))
   expect_equal(out$criterion_validity_comparison$conclusion,
-               c("Removed", "Retained", "Retained"))
+               c("Retained", "Removed", "Retained"))
 })
 
 test_that("step4_structure_screen supports adjusted p-values", {

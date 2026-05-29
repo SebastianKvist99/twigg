@@ -242,7 +242,7 @@ step4_structure_screen <- function(data, items, covariates,
       break
     }
 
-    remove_idx <- removable[1]
+    remove_idx <- removable[which.max(pass_df$decision_p_value[removable])]
     remove_covariate <- pass_df$covariate[remove_idx]
     pass_df$removed_after_pass[remove_idx] <- TRUE
 
