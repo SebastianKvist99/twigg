@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-`twigg` (name still TBD) implements tools for item screening in graphical log-linear 
+`twigg` implements tools for item screening in graphical log-linear 
 Rasch models (GLLRMs). The package follows the screening logic described by Kreiner
 and Christensen: first check consistency, then screen for local
 dependence (LD), differential item functioning (DIF), score covariate
