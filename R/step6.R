@@ -51,6 +51,7 @@ step6_empty_dif_tests <- function() {
     hypothesis = character(0),
     gamma = numeric(0),
     p_value = numeric(0),
+    p_value_method = character(0),
     adjusted_p_value = numeric(0),
     decision_p_value = numeric(0),
     p_value_label = character(0),
@@ -70,6 +71,7 @@ step6_empty_ld_tests <- function() {
     rest_component = character(0),
     gamma = numeric(0),
     p_value = numeric(0),
+    p_value_method = character(0),
     adjusted_p_value = numeric(0),
     decision_p_value = numeric(0),
     p_value_label = character(0),
@@ -119,7 +121,8 @@ step6_source_maps <- function(step5) {
   )
 }
 
-step6_c5_tests <- function(dataset, step5, alpha, adjust_method, B) {
+step6_c5_tests <- function(dataset, step5, alpha, adjust_method, B,
+                           p_value_method) {
   dif <- step5$dif_edges
   if (nrow(dif) == 0) return(step6_empty_dif_tests())
 
@@ -136,7 +139,8 @@ step6_c5_tests <- function(dataset, step5, alpha, adjust_method, B) {
       Yi = Yi,
       Xj = Xj,
       strata_vars = strata_vars,
-      B = B
+      B = B,
+      p_value_method = p_value_method
     )
 
     data.frame(
@@ -145,6 +149,11 @@ step6_c5_tests <- function(dataset, step5, alpha, adjust_method, B) {
       hypothesis = "C5",
       gamma = test$gamma,
       p_value = unname(test$p_value[1]),
+      p_value_method = if (is.null(test$p_value_method)) {
+        p_value_method
+      } else {
+        test$p_value_method
+      },
       adjusted_p_value = NA_real_,
       decision_p_value = unname(test$p_value[1]),
       p_value_label = NA_character_,
@@ -209,7 +218,7 @@ step6_sources_for_items <- function(items, sources_by_item) {
 }
 
 step6_one_ld_test <- function(dataset, Yi, Xj, hypothesis, component,
-                              sources_by_item, B) {
+                              sources_by_item, B, p_value_method) {
   rest <- step6_add_rest_score(dataset, component)
   dataset <- rest$dataset
   source_vars <- step6_sources_for_items(component, sources_by_item)
@@ -220,7 +229,8 @@ step6_one_ld_test <- function(dataset, Yi, Xj, hypothesis, component,
     Yi = Yi,
     Xj = Xj,
     strata_vars = strata_vars,
-    B = B
+    B = B,
+    p_value_method = p_value_method
   )
 
   data.frame(
@@ -230,6 +240,11 @@ step6_one_ld_test <- function(dataset, Yi, Xj, hypothesis, component,
     rest_component = paste(component, collapse = " + "),
     gamma = test$gamma,
     p_value = unname(test$p_value[1]),
+    p_value_method = if (is.null(test$p_value_method)) {
+      p_value_method
+    } else {
+      test$p_value_method
+    },
     adjusted_p_value = NA_real_,
     decision_p_value = unname(test$p_value[1]),
     p_value_label = NA_character_,
@@ -241,7 +256,8 @@ step6_one_ld_test <- function(dataset, Yi, Xj, hypothesis, component,
   )
 }
 
-step6_ld_tests <- function(dataset, items, step5, alpha, adjust_method, B) {
+step6_ld_tests <- function(dataset, items, step5, alpha, adjust_method, B,
+                           p_value_method) {
   ld <- step5$ld_edges
   if (nrow(ld) == 0) return(step6_empty_ld_tests())
 
@@ -261,7 +277,8 @@ step6_ld_tests <- function(dataset, items, step5, alpha, adjust_method, B) {
       hypothesis = "C7",
       component = comp_a,
       sources_by_item = maps$sources_by_item,
-      B = B
+      B = B,
+      p_value_method = p_value_method
     )
     rows[[length(rows) + 1]] <- step6_one_ld_test(
       dataset = dataset,
@@ -270,7 +287,8 @@ step6_ld_tests <- function(dataset, items, step5, alpha, adjust_method, B) {
       hypothesis = "C9",
       component = comp_b,
       sources_by_item = maps$sources_by_item,
-      B = B
+      B = B,
+      p_value_method = p_value_method
     )
   }
 
@@ -357,8 +375,13 @@ step6_removed_ld <- function(step5, ld_tests) {
 #' @param adjust_method Optional p-value adjustment method passed to
 #'   \code{\link[stats]{p.adjust}} separately within the DIF and LD Step 6 test
 #'   families. If \code{NULL}, raw p-values are used.
+#' @param p_value_method Character string specifying how p-values are computed.
+#'   Use \code{"monte_carlo"} for Monte Carlo conditional independence tests,
+#'   \code{"asymptotic"} for the normal approximation based on partial gamma and
+#'   its standard error, or \code{"coin_asymptotic"} for \code{coin}'s
+#'   asymptotic conditional independence test.
 #' @param B Integer. Number of Monte Carlo samples used by the conditional
-#'   independence tests.
+#'   independence tests. Ignored unless \code{p_value_method = "monte_carlo"}.
 #'
 #' @returns An object of class \code{"gllrm_step6"}, a list containing the Step
 #'   6 DIF and LD tests, removed edges, the updated final Step 5 graph, and its
@@ -366,8 +389,12 @@ step6_removed_ld <- function(step5, ld_tests) {
 #' @export
 step6_check_gllrm <- function(data, step5, items = NULL, covariates = NULL,
                               score = NULL, alpha = 0.05,
-                              adjust_method = NULL, B = 10000) {
+                              adjust_method = NULL,
+                              p_value_method = c("monte_carlo", "asymptotic",
+                                                 "coin_asymptotic"),
+                              B = 10000) {
   call <- match.call()
+  p_value_method <- match.arg(p_value_method)
   step5_validate_graph_object(step5)
   step6_check_adjust_method(adjust_method)
   if (!is.numeric(alpha) || length(alpha) != 1 || is.na(alpha) ||
@@ -383,8 +410,10 @@ step6_check_gllrm <- function(data, step5, items = NULL, covariates = NULL,
   }
 
   dataset <- step6_prepare_data(data, items, covariates, score = score)
-  dif_tests <- step6_c5_tests(dataset, step5, alpha, adjust_method, B)
-  ld_tests <- step6_ld_tests(dataset, items, step5, alpha, adjust_method, B)
+  dif_tests <- step6_c5_tests(
+    dataset, step5, alpha, adjust_method, B, p_value_method)
+  ld_tests <- step6_ld_tests(
+    dataset, items, step5, alpha, adjust_method, B, p_value_method)
 
   final_graph <- step6_rebuild_graph(step5, dif_tests, ld_tests)
   moralized_graph <- build_moralized_graph(final_graph)
@@ -399,6 +428,7 @@ step6_check_gllrm <- function(data, step5, items = NULL, covariates = NULL,
     moralized_graph = moralized_graph,
     alpha = alpha,
     adjust_method = adjust_method,
+    p_value_method = p_value_method,
     call = call
   )
 

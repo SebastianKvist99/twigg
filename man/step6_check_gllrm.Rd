@@ -12,6 +12,7 @@ step6_check_gllrm(
   score = NULL,
   alpha = 0.05,
   adjust_method = NULL,
+  p_value_method = c("monte_carlo", "asymptotic", "coin_asymptotic"),
   B = 10000
 )
 }
@@ -38,8 +39,14 @@ edges.}
 \code{\link[stats]{p.adjust}} separately within the DIF and LD Step 6 test
 families. If \code{NULL}, raw p-values are used.}
 
+\item{p_value_method}{Character string specifying how p-values are computed.
+Use \code{"monte_carlo"} for Monte Carlo conditional independence tests,
+\code{"asymptotic"} for the normal approximation based on partial gamma and
+its standard error, or \code{"coin_asymptotic"} for \code{coin}'s
+asymptotic conditional independence test.}
+
 \item{B}{Integer. Number of Monte Carlo samples used by the conditional
-independence tests.}
+independence tests. Ignored unless \code{p_value_method = "monte_carlo"}.}
 }
 \value{
 An object of class \code{"gllrm_step6"}, a list containing the Step

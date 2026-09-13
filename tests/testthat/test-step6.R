@@ -31,10 +31,12 @@ test_that("step6_check_gllrm removes unsupported DIF and LD edges", {
 
   local_mocked_bindings(
     partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars,
-                                       B = 10000) {
+                                       B = 10000,
+                                       p_value_method = "monte_carlo") {
       list(
         gamma = 0.1,
         p_value = 0.20,
+        p_value_method = p_value_method,
         strata_vars = strata_vars
       )
     },
@@ -90,12 +92,14 @@ test_that("step6_check_gllrm keeps edges supported by any relevant check", {
 
   local_mocked_bindings(
     partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars,
-                                       B = 10000) {
+                                       B = 10000,
+                                       p_value_method = "monte_carlo") {
       p <- if (Yi == "item2" && Xj == "sex") 0.01 else
         if (any(grepl("item1", strata_vars))) 0.20 else 0.01
       list(
         gamma = 0.4,
         p_value = p,
+        p_value_method = p_value_method,
         strata_vars = strata_vars
       )
     },
@@ -140,9 +144,15 @@ test_that("step6 C5 conditioning combines score, other DIF items, and sources", 
   seen <- list()
   local_mocked_bindings(
     partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars,
-                                       B = 10000) {
+                                       B = 10000,
+                                       p_value_method = "monte_carlo") {
       seen[[paste(Yi, Xj, sep = "_")]] <<- strata_vars
-      list(gamma = 0.3, p_value = 0.01, strata_vars = strata_vars)
+      list(
+        gamma = 0.3,
+        p_value = 0.01,
+        p_value_method = p_value_method,
+        strata_vars = strata_vars
+      )
     },
     .package = "twigg"
   )
@@ -178,10 +188,12 @@ test_that("step6 supports adjusted p-values within DIF and LD families", {
 
   local_mocked_bindings(
     partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars,
-                                       B = 10000) {
+                                       B = 10000,
+                                       p_value_method = "monte_carlo") {
       list(
         gamma = 0.2,
         p_value = if (Yi == "item1") 0.03 else 0.01,
+        p_value_method = p_value_method,
         strata_vars = strata_vars
       )
     },
@@ -198,4 +210,57 @@ test_that("step6 supports adjusted p-values within DIF and LD families", {
 
   expect_equal(out$dif_tests$adjusted_p_value, c(0.06, 0.02))
   expect_equal(out$dif_tests$supported, c(FALSE, TRUE))
+})
+
+test_that("step6_check_gllrm passes through p_value_method", {
+
+  dataset <- data.frame(
+    item1 = c(0, 1, 0, 1, 0, 1, 0, 1, 0, 1),
+    item2 = c(1, 1, 0, 0, 1, 0, 1, 1, 0, 0),
+    sex = c(0, 1, 0, 1, 1, 0, 0, 1, 0, 1)
+  )
+
+  step5 <- build_gllrm_graph(
+    items = c("item1", "item2"),
+    covariates = "sex",
+    dif = data.frame(
+      item = "item1",
+      DIF_source = "sex",
+      conclusion = "DIF",
+      stringsAsFactors = FALSE
+    ),
+    ld = data.frame(
+      item1 = "item1",
+      item2 = "item2",
+      stringsAsFactors = FALSE
+    )
+  )
+
+  seen <- character()
+  local_mocked_bindings(
+    partial_gamma_coin_test = function(dataset, Yi, Xj, strata_vars,
+                                       B = 10000,
+                                       p_value_method = "monte_carlo") {
+      seen <<- c(seen, p_value_method)
+      list(
+        gamma = 0.2,
+        p_value = 0.01,
+        p_value_method = p_value_method,
+        strata_vars = strata_vars
+      )
+    },
+    .package = "twigg"
+  )
+
+  out <- step6_check_gllrm(
+    data = dataset,
+    step5 = step5,
+    p_value_method = "asymptotic",
+    B = 10
+  )
+
+  expect_true(all(seen == "asymptotic"))
+  expect_equal(out$p_value_method, "asymptotic")
+  expect_equal(out$dif_tests$p_value_method, "asymptotic")
+  expect_equal(out$ld_tests$p_value_method, c("asymptotic", "asymptotic"))
 })
