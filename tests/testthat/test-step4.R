@@ -11,7 +11,8 @@ test_that("step4_structure_screen removes one covariate at a time and retests", 
   calls <- list()
 
   local_mocked_bindings(
-    step4_one_test = function(dataset, Xj, covariates, B = 10000) {
+    step4_one_test = function(dataset, Xj, covariates, B = 10000,
+                              p_value_method = "monte_carlo") {
       calls[[length(calls) + 1]] <<- list(Xj = Xj, covariates = covariates)
 
       a_is_spurious <- Xj == "A" && "B" %in% covariates
@@ -26,6 +27,7 @@ test_that("step4_structure_screen removes one covariate at a time and retests", 
         } else {
           0.01
         },
+        p_value_method = p_value_method,
         strata_vars = setdiff(covariates, Xj)
       )
     },
@@ -69,10 +71,12 @@ test_that("step4_structure_screen supports adjusted p-values", {
   )
 
   local_mocked_bindings(
-    step4_one_test = function(dataset, Xj, covariates, B = 10000) {
+    step4_one_test = function(dataset, Xj, covariates, B = 10000,
+                              p_value_method = "monte_carlo") {
       list(
         gamma = 0.4,
         p_value = if (Xj == "A") 0.04 else 0.01,
+        p_value_method = p_value_method,
         strata_vars = setdiff(covariates, Xj)
       )
     },
@@ -101,8 +105,14 @@ test_that("step4_structure_screen labels Monte Carlo p-values reported as zero",
   )
 
   local_mocked_bindings(
-    step4_one_test = function(dataset, Xj, covariates, B = 10000) {
-      list(gamma = 0.4, p_value = 0, strata_vars = character(0))
+    step4_one_test = function(dataset, Xj, covariates, B = 10000,
+                              p_value_method = "monte_carlo") {
+      list(
+        gamma = 0.4,
+        p_value = 0,
+        p_value_method = p_value_method,
+        strata_vars = character(0)
+      )
     },
     .package = "twigg"
   )
@@ -135,9 +145,15 @@ test_that("step4_structure_screen accepts a supplied score column", {
   )
 
   local_mocked_bindings(
-    step4_one_test = function(dataset, Xj, covariates, B = 10000) {
+    step4_one_test = function(dataset, Xj, covariates, B = 10000,
+                              p_value_method = "monte_carlo") {
       expect_equal(dataset$Score, c(1, 2, 0, 1, 1, 1, 1, 2, 0, 1))
-      list(gamma = 0.5, p_value = 0.01, strata_vars = character(0))
+      list(
+        gamma = 0.5,
+        p_value = 0.01,
+        p_value_method = p_value_method,
+        strata_vars = character(0)
+      )
     },
     .package = "twigg"
   )
@@ -163,8 +179,14 @@ test_that("step4 S3 helpers print, summarize, and tidy", {
   )
 
   local_mocked_bindings(
-    step4_one_test = function(dataset, Xj, covariates, B = 10000) {
-      list(gamma = 0.5, p_value = 0.01, strata_vars = character(0))
+    step4_one_test = function(dataset, Xj, covariates, B = 10000,
+                              p_value_method = "monte_carlo") {
+      list(
+        gamma = 0.5,
+        p_value = 0.01,
+        p_value_method = p_value_method,
+        strata_vars = character(0)
+      )
     },
     .package = "twigg"
   )
@@ -180,4 +202,41 @@ test_that("step4 S3 helpers print, summarize, and tidy", {
   expect_s3_class(summary(out), "summary.gllrm_step4")
   expect_output(print(summary(out)), "Summary of GLLRM Step 4")
   expect_equal(tidy.gllrm_step4(out), out$tests)
+})
+
+test_that("step4_structure_screen passes through p_value_method", {
+
+  dataset <- data.frame(
+    item1 = c(0, 1, 0, 1, 0, 1, 0, 1, 0, 1),
+    item2 = c(1, 1, 0, 0, 1, 0, 1, 1, 0, 0),
+    A = c(0, 0, 1, 1, 0, 1, 0, 0, 1, 1),
+    B = c(0, 1, 0, 1, 1, 0, 0, 1, 0, 1)
+  )
+
+  seen <- character()
+  local_mocked_bindings(
+    step4_one_test = function(dataset, Xj, covariates, B = 10000,
+                              p_value_method = "monte_carlo") {
+      seen <<- c(seen, p_value_method)
+      list(
+        gamma = 0.5,
+        p_value = 0.01,
+        p_value_method = p_value_method,
+        strata_vars = setdiff(covariates, Xj)
+      )
+    },
+    .package = "twigg"
+  )
+
+  out <- step4_structure_screen(
+    data = dataset,
+    items = c("item1", "item2"),
+    covariates = c("A", "B"),
+    p_value_method = "asymptotic",
+    B = 10
+  )
+
+  expect_true(all(seen == "asymptotic"))
+  expect_equal(out$p_value_method, "asymptotic")
+  expect_equal(out$tests$p_value_method, c("asymptotic", "asymptotic"))
 })

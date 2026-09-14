@@ -12,7 +12,8 @@ step4_structure_screen(
   alpha = 0.05,
   adjust_method = NULL,
   method = "partial_gamma",
-  B = 10000
+  B = 10000,
+  p_value_method = c("monte_carlo", "asymptotic", "coin_asymptotic")
 )
 }
 \arguments{
@@ -36,8 +37,14 @@ raw p-values are used.}
 \item{method}{Character string. Currently only \code{"partial_gamma"} is
 supported.}
 
+\item{p_value_method}{Character string specifying how p-values are computed.
+Use \code{"monte_carlo"} for Monte Carlo conditional independence tests,
+\code{"asymptotic"} for the normal approximation based on partial gamma and
+its standard error, or \code{"coin_asymptotic"} for \code{coin}'s
+asymptotic conditional independence test.}
+
 \item{B}{Integer. Number of Monte Carlo samples used by the conditional
-independence test.}
+independence test. Ignored unless \code{p_value_method = "monte_carlo"}.}
 }
 \value{
 An object of class \code{"gllrm_step4"}, a list containing:

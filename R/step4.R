@@ -4,10 +4,14 @@
 #' @param Xj Character string naming the covariate to test.
 #' @param covariates Character vector of the current covariate set.
 #' @param B Integer. Number of Monte Carlo samples.
+#' @param p_value_method Character string specifying how p-values are computed.
 #'
 #' @returns A list with gamma, p-value, and conditioning variables.
 #' @keywords internal
-step4_one_test <- function(dataset, Xj, covariates, B = 10000) {
+step4_one_test <- function(dataset, Xj, covariates, B = 10000,
+                           p_value_method = c("monte_carlo", "asymptotic",
+                                              "coin_asymptotic")) {
+  p_value_method <- match.arg(p_value_method)
   cond_vars <- setdiff(covariates, Xj)
 
   if (length(cond_vars) == 0) {
@@ -22,7 +26,8 @@ step4_one_test <- function(dataset, Xj, covariates, B = 10000) {
     Yi = "Score",
     Xj = Xj,
     strata_vars = test_cond_vars,
-    B = B
+    B = B,
+    p_value_method = p_value_method
   )
 
   test$strata_vars <- cond_vars
@@ -97,8 +102,13 @@ step4_criterion_summary <- function(test_rows, alpha) {
 #'   raw p-values are used.
 #' @param method Character string. Currently only \code{"partial_gamma"} is
 #'   supported.
+#' @param p_value_method Character string specifying how p-values are computed.
+#'   Use \code{"monte_carlo"} for Monte Carlo conditional independence tests,
+#'   \code{"asymptotic"} for the normal approximation based on partial gamma and
+#'   its standard error, or \code{"coin_asymptotic"} for \code{coin}'s
+#'   asymptotic conditional independence test.
 #' @param B Integer. Number of Monte Carlo samples used by the conditional
-#'   independence test.
+#'   independence test. Ignored unless \code{p_value_method = "monte_carlo"}.
 #'
 #' @returns An object of class \code{"gllrm_step4"}, a list containing:
 #' \describe{
@@ -132,8 +142,12 @@ step4_structure_screen <- function(data, items, covariates,
                                    alpha = 0.05,
                                    adjust_method = NULL,
                                    method = "partial_gamma",
-                                   B = 10000) {
+                                   B = 10000,
+                                   p_value_method = c("monte_carlo",
+                                                      "asymptotic",
+                                                      "coin_asymptotic")) {
   call <- match.call()
+  p_value_method <- match.arg(p_value_method)
 
   if (!is.data.frame(data)) {
     stop("'data' must be a data.frame", call. = FALSE)
@@ -195,12 +209,20 @@ step4_structure_screen <- function(data, items, covariates,
   repeat {
     pass_covariates <- current_covariates
     pass_tests <- lapply(pass_covariates, function(Xj) {
-      test <- step4_one_test(dataset, Xj, pass_covariates, B = B)
+      test <- step4_one_test(
+        dataset, Xj, pass_covariates, B = B,
+        p_value_method = p_value_method
+      )
       data.frame(
         iteration = iteration,
         covariate = Xj,
         gamma = test$gamma,
         p_value = unname(test$p_value[1]),
+        p_value_method = if (is.null(test$p_value_method)) {
+          p_value_method
+        } else {
+          test$p_value_method
+        },
         adjusted_p_value = NA_real_,
         decision_p_value = unname(test$p_value[1]),
         conditioned_on = if (length(test$strata_vars) == 0) {
@@ -365,6 +387,7 @@ step4_structure_screen <- function(data, items, covariates,
     alpha = alpha,
     adjust_method = adjust_method,
     method = method,
+    p_value_method = p_value_method,
     call = call
   )
 
@@ -380,6 +403,7 @@ print.gllrm_step4 <- function(x, ...) {
   cat("P-value adjustment: ",
       ifelse(is.null(x$adjust_method), "none", x$adjust_method),
       "\n", sep = "")
+  cat("P-value method: ", x$p_value_method, "\n", sep = "")
   cat("Retained covariates: ",
       ifelse(length(x$retained_covariates) == 0,
              "None",
